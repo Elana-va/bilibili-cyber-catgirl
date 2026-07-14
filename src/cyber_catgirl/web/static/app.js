@@ -53,11 +53,11 @@ document.querySelectorAll('[data-action="kill-switch"]').forEach((button) => {
 });
 
 document.querySelectorAll("[data-approve]").forEach((button) => {
-  button.addEventListener("click", () => confirmAction("批准后会创建一条发布任务。", () => requestAction(`/api/drafts/${button.dataset.approve}/approve`, { success: "草稿已批准" }))));
+  button.addEventListener("click", () => confirmAction("批准后会创建一条发布任务。", () => requestAction(`/api/drafts/${button.dataset.approve}/approve`, { success: "草稿已批准" })));
 });
 
 document.querySelectorAll("[data-reject]").forEach((button) => {
-  button.addEventListener("click", () => confirmAction("拒绝后不会创建发布任务。", () => requestAction(`/api/drafts/${button.dataset.reject}/reject`, { success: "草稿已拒绝" }))));
+  button.addEventListener("click", () => confirmAction("拒绝后不会创建发布任务。", () => requestAction(`/api/drafts/${button.dataset.reject}/reject`, { success: "草稿已拒绝" })));
 });
 
 document.querySelectorAll("[data-edit-approve]").forEach((button) => {
