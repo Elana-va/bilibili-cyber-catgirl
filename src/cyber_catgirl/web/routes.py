@@ -1,17 +1,11 @@
 from dataclasses import dataclass
-from pathlib import Path
-
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from cyber_catgirl.config import RunMode, Settings
 from cyber_catgirl.models import DraftRecord, PublishJobRecord, SystemSettingRecord
-
-
-TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
+from cyber_catgirl.web.pages import build_page_router
 
 
 @dataclass
@@ -33,6 +27,7 @@ class EditDraftRequest(BaseModel):
 
 def build_router(session_factory, state: RuntimeState) -> APIRouter:
     router = APIRouter()
+    router.include_router(build_page_router(session_factory, state))
 
     def save_setting(key: str, value: str) -> None:
         with session_factory() as session:
@@ -66,31 +61,6 @@ def build_router(session_factory, state: RuntimeState) -> APIRouter:
             draft.review_status = "approved"
             session.commit()
             return {"draft_id": draft.id, "job_id": job.id, "status": "approved"}
-
-    @router.get("/", response_class=HTMLResponse)
-    def dashboard(request: Request):
-        with session_factory() as session:
-            pending = session.scalars(
-                select(DraftRecord)
-                .where(DraftRecord.review_status == "pending")
-                .order_by(DraftRecord.created_at.desc())
-                .limit(50)
-            ).all()
-            failed_count = session.scalar(
-                select(func.count()).select_from(PublishJobRecord).where(
-                    PublishJobRecord.status.in_(["failed", "visibility_unknown"])
-                )
-            )
-        return TEMPLATES.TemplateResponse(
-            request,
-            "index.html",
-            {
-                "pending": pending,
-                "failed_count": failed_count or 0,
-                "run_mode": state.settings.run_mode.value,
-                "kill_switch": state.settings.kill_switch,
-            },
-        )
 
     @router.get("/api/health")
     def health() -> dict:
