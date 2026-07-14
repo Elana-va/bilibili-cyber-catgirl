@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cyber_catgirl.db import Base
@@ -25,6 +25,7 @@ class DraftRecord(Base):
     __tablename__ = "drafts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    content_key: Mapped[str | None] = mapped_column(String(128), unique=True, nullable=True)
     event_id: Mapped[int | None] = mapped_column(ForeignKey("events.id"), nullable=True)
     draft_type: Mapped[str] = mapped_column(String(32), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
@@ -85,3 +86,26 @@ class MemoryRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
+
+
+class DailyMetricRecord(Base):
+    __tablename__ = "daily_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    metric_date: Mapped[date] = mapped_column(Date, unique=True, nullable=False)
+    unique_users: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    comment_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    replied_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    review_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class ScheduledContentRecord(Base):
+    __tablename__ = "scheduled_content"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    schedule_key: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str] = mapped_column(String(32), default="normal", nullable=False)
+    run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
