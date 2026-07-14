@@ -67,9 +67,20 @@ def build_page_router(session_factory, state) -> APIRouter:
         )
 
     @router.get("/analytics", response_class=HTMLResponse)
-    def analytics() -> str:
-        service.analytics()
-        return "<h1>互动数据</h1>"
+    def analytics(request: Request, days: int = 7):
+        view = service.analytics(days=days)
+        return TEMPLATES.TemplateResponse(
+            request,
+            "analytics.html",
+            {
+                "analytics": view,
+                "max_comments": max((point.comment_count for point in view.points), default=1)
+                or 1,
+                "current_page": "analytics",
+                "run_mode": state.settings.run_mode.value,
+                "kill_switch": state.settings.kill_switch,
+            },
+        )
 
     @router.get("/logs", response_class=HTMLResponse)
     def logs() -> str:

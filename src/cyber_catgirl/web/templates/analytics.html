@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}互动数据 · 小喵创作室{% endblock %}
+{% block page_title %}互动数据{% endblock %}
+{% block content %}
+  <section class="page-intro">
+    <div><p class="eyebrow">GROUNDED ANALYTICS</p><h2>只看真实发生的互动</h2><p>所有数字来自本地数据库；缺失日期不会被推断或插值。</p></div>
+    <nav class="range-switch" aria-label="时间范围"><a href="/analytics?days=7" class="{% if analytics.days == 7 %}is-active{% endif %}">7 天</a><a href="/analytics?days=14" class="{% if analytics.days == 14 %}is-active{% endif %}">14 天</a></nav>
+  </section>
+
+  {% set latest = analytics.points[-1] %}
+  <section class="metric-grid analytics-summary">
+    <article class="metric-card"><span>独立用户</span><strong>{{ latest.unique_users }}</strong><small>{{ latest.metric_date.strftime('%m-%d') }}</small></article>
+    <article class="metric-card"><span>评论数</span><strong>{{ latest.comment_count }}</strong><small>真实采集</small></article>
+    <article class="metric-card"><span>回复数</span><strong>{{ latest.replied_count }}</strong><small>已核验</small></article>
+    <article class="metric-card{% if latest.failed_count %} is-danger{% endif %}"><span>失败数</span><strong>{{ latest.failed_count }}</strong><small>{{ "需要检查" if latest.failed_count else "运行正常" }}</small></article>
+  </section>
+
+  <section class="panel chart-panel" data-series="comment_count">
+    <header class="panel-heading"><div><p class="eyebrow">COMMENT TREND</p><h2>评论趋势</h2></div><span class="chart-legend"><i></i> 评论数</span></header>
+    <div class="chart-scroll">
+      <svg class="bar-chart" viewBox="0 0 {{ analytics.points|length * 60 }} 170" role="img" aria-labelledby="chart-title chart-desc">
+        <title id="chart-title">最近 {{ analytics.days }} 天评论数量</title><desc id="chart-desc">缺失日期使用空心柱表示，不代表真实的零评论。</desc>
+        {% for point in analytics.points %}
+          {% set height = (point.comment_count / max_comments * 105) if point.has_data else 8 %}
+          <g><rect x="{{ loop.index0 * 60 + 13 }}" y="{{ 125 - height }}" width="34" height="{{ height }}" rx="7" class="chart-bar{% if not point.has_data %} is-missing{% endif %}"></rect><text x="{{ loop.index0 * 60 + 30 }}" y="145" text-anchor="middle">{{ point.metric_date.strftime('%m-%d') }}</text>{% if point.has_data %}<text x="{{ loop.index0 * 60 + 30 }}" y="{{ 116 - height }}" text-anchor="middle" class="chart-value">{{ point.comment_count }}</text>{% endif %}</g>
+        {% endfor %}
+      </svg>
+    </div>
+  </section>
+
+  <section class="panel data-table-panel"><header class="panel-heading"><div><p class="eyebrow">SOURCE DATA</p><h2>每日明细</h2></div></header><div class="table-scroll"><table><thead><tr><th>日期</th><th>数据状态</th><th>独立用户</th><th>评论</th><th>回复</th><th>审核</th><th>失败</th></tr></thead><tbody>{% for point in analytics.points|reverse %}<tr><td>{{ point.metric_date }}</td><td><span class="state-badge state-{{ 'active' if point.has_data else 'disabled' }}">{{ "已记录" if point.has_data else "无数据" }}</span></td><td>{{ point.unique_users }}</td><td>{{ point.comment_count }}</td><td>{{ point.replied_count }}</td><td>{{ point.review_count }}</td><td>{{ point.failed_count }}</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}
