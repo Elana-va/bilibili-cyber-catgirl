@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}审核中心 · 小喵创作室{% endblock %}
+{% block page_title %}审核中心{% endblock %}
+{% block content %}
+  <section class="page-intro">
+    <div><p class="eyebrow">HUMAN REVIEW</p><h2>每一次发布，都由你最后确认</h2><p>筛选草稿、核对来源和风险，再逐条批准或拒绝。</p></div>
+    <span class="count-chip">{{ reviews|length }} 条待处理</span>
+  </section>
+
+  <form class="filter-bar" method="get" action="/reviews">
+    <label><span>内容类型</span><select name="draft_type"><option value="">全部</option><option value="reply"{% if filters.draft_type == 'reply' %} selected{% endif %}>评论回复</option><option value="dynamic"{% if filters.draft_type == 'dynamic' %} selected{% endif %}>动态</option><option value="daily_report"{% if filters.draft_type == 'daily_report' %} selected{% endif %}>互动日报</option></select></label>
+    <label><span>风险等级</span><select name="risk_level"><option value="">全部</option><option value="low"{% if filters.risk_level == 'low' %} selected{% endif %}>低风险</option><option value="medium"{% if filters.risk_level == 'medium' %} selected{% endif %}>中风险</option><option value="high"{% if filters.risk_level == 'high' %} selected{% endif %}>高风险</option></select></label>
+    <label class="search-field"><span>关键词</span><input name="query" value="{{ filters.query }}" placeholder="搜索草稿内容"></label>
+    <button class="button button-secondary" type="submit">应用筛选</button>
+    <a class="clear-link" href="/reviews">清除</a>
+  </form>
+
+  {% if reviews %}
+    <div class="review-cards">
+      {% for draft in reviews %}
+        <article class="review-card" id="draft-{{ draft.id }}">
+          <header><div class="review-meta"><span class="type-badge">{{ {"reply":"评论回复", "dynamic":"动态", "daily_report":"互动日报"}.get(draft.draft_type, draft.draft_type) }}</span><span class="risk-badge risk-{{ draft.risk_level }}">{{ {"low":"低风险", "medium":"中风险", "high":"高风险"}.get(draft.risk_level, draft.risk_level) }}</span></div><time>{{ draft.created_at.strftime('%Y-%m-%d %H:%M') }}</time></header>
+          <textarea class="draft-editor" aria-label="草稿内容" data-draft-content="{{ draft.id }}">{{ draft.content }}</textarea>
+          {% if draft.publication_status == "visibility_unknown" %}
+            <div class="safety-notice"><strong>需要人工核验</strong><span>平台可能已写入，请到 B站人工检查；系统不会自动重发。</span></div>
+          {% endif %}
+          <footer>
+            <span class="draft-id">DRAFT / {{ draft.id }}</span>
+            <div class="card-actions">
+              <button class="button button-secondary" type="button" data-reject="{{ draft.id }}">拒绝</button>
+              <button class="button button-primary" type="button" data-edit-approve="{{ draft.id }}"{% if kill_switch or draft.publication_status == 'visibility_unknown' %} disabled{% endif %}>编辑并批准</button>
+            </div>
+          </footer>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <article class="panel">{% with icon="✓", title="没有符合筛选条件的草稿", message="清除筛选，或等待下一轮内容生成。" %}{% include "components/empty_state.html" %}{% endwith %}</article>
+  {% endif %}
+{% endblock %}

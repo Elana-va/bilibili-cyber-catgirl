@@ -16,6 +16,7 @@ class ReviewItem(BaseModel):
     risk_level: str
     review_status: str
     created_at: datetime
+    publication_status: str | None = None
 
 
 class ContentPlanItem(BaseModel):
@@ -62,4 +63,3 @@ class DashboardOverview(BaseModel):
     failed_jobs: int = 0
     recent_reviews: list[ReviewItem] = Field(default_factory=list)
     recent_activity: list[LogItem] = Field(default_factory=list)
-

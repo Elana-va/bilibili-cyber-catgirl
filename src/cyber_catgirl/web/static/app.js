@@ -59,3 +59,16 @@ document.querySelectorAll("[data-approve]").forEach((button) => {
 document.querySelectorAll("[data-reject]").forEach((button) => {
   button.addEventListener("click", () => confirmAction("拒绝后不会创建发布任务。", () => requestAction(`/api/drafts/${button.dataset.reject}/reject`, { success: "草稿已拒绝" }))));
 });
+
+document.querySelectorAll("[data-edit-approve]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const draftId = button.dataset.editApprove;
+    const editor = document.querySelector(`[data-draft-content="${draftId}"]`);
+    confirmAction("确认内容无误后，将创建一条发布任务。", () =>
+      requestAction(`/api/drafts/${draftId}/edit-and-approve`, {
+        body: { content: editor.value },
+        success: "草稿已编辑并批准",
+      }),
+    );
+  });
+});

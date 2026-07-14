@@ -30,9 +30,28 @@ def build_page_router(session_factory, state) -> APIRouter:
         )
 
     @router.get("/reviews", response_class=HTMLResponse)
-    def reviews() -> str:
-        service.pending_reviews(ReviewFilters())
-        return "<h1>审核中心</h1>"
+    def reviews(
+        request: Request,
+        draft_type: str | None = None,
+        risk_level: str | None = None,
+        query: str = "",
+    ):
+        filters = ReviewFilters(
+            draft_type=draft_type or None,
+            risk_level=risk_level or None,
+            query=query,
+        )
+        return TEMPLATES.TemplateResponse(
+            request,
+            "reviews.html",
+            {
+                "reviews": service.pending_reviews(filters),
+                "filters": filters,
+                "current_page": "reviews",
+                "run_mode": state.settings.run_mode.value,
+                "kill_switch": state.settings.kill_switch,
+            },
+        )
 
     @router.get("/content", response_class=HTMLResponse)
     def content() -> str:

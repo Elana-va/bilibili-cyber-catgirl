@@ -59,7 +59,11 @@ class DashboardService:
         )
 
     def pending_reviews(self, filters: ReviewFilters) -> list[ReviewItem]:
-        statement = select(DraftRecord).where(DraftRecord.review_status == "pending")
+        statement = (
+            select(DraftRecord, PublishJobRecord.status)
+            .outerjoin(PublishJobRecord, PublishJobRecord.draft_id == DraftRecord.id)
+            .where(DraftRecord.review_status == "pending")
+        )
         if filters.draft_type:
             statement = statement.where(DraftRecord.draft_type == filters.draft_type)
         if filters.risk_level:
@@ -68,8 +72,19 @@ class DashboardService:
             statement = statement.where(DraftRecord.content.contains(filters.query))
         statement = statement.order_by(DraftRecord.created_at.desc())
         with self.session_factory() as session:
-            rows = session.scalars(statement).all()
-        return [ReviewItem.model_validate(row, from_attributes=True) for row in rows]
+            rows = session.execute(statement).all()
+        return [
+            ReviewItem(
+                id=draft.id,
+                draft_type=draft.draft_type,
+                content=draft.content,
+                risk_level=draft.risk_level,
+                review_status=draft.review_status,
+                created_at=draft.created_at,
+                publication_status=publication_status,
+            )
+            for draft, publication_status in rows
+        ]
 
     def content_plans(self) -> list[ContentPlanItem]:
         with self.session_factory() as session:
