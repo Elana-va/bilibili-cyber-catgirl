@@ -72,3 +72,26 @@ document.querySelectorAll("[data-edit-approve]").forEach((button) => {
     );
   });
 });
+
+document.querySelectorAll("[data-toggle-panel]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const panel = document.querySelector(`#${button.dataset.togglePanel}`);
+    panel.hidden = !panel.hidden;
+  });
+});
+
+document.querySelectorAll("[data-plan-enabled]").forEach((button) => {
+  button.addEventListener("click", () => requestAction(`/api/content-plans/${button.dataset.planEnabled}/enabled`, {
+    body: { enabled: button.dataset.enabled === "true" },
+    success: "计划状态已更新",
+  }));
+});
+
+document.querySelectorAll("[data-plan-form]").forEach((form) => {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(form));
+    data.run_at = new Date(data.run_at).toISOString();
+    await requestAction("/api/content-plans", { body: data, success: "内容计划已创建" });
+  });
+});

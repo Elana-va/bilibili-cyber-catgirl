@@ -1,10 +1,18 @@
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Literal
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from cyber_catgirl.config import RunMode, Settings
-from cyber_catgirl.models import DraftRecord, PublishJobRecord, SystemSettingRecord
+from cyber_catgirl.models import (
+    DraftRecord,
+    PublishJobRecord,
+    ScheduledContentRecord,
+    SystemSettingRecord,
+)
 from cyber_catgirl.web.pages import build_page_router
 
 
@@ -23,6 +31,24 @@ class RunModeRequest(BaseModel):
 
 class EditDraftRequest(BaseModel):
     content: str = Field(min_length=1, max_length=1000)
+
+
+class ContentPlanRequest(BaseModel):
+    schedule_key: str = Field(min_length=3, max_length=128)
+    prompt: str = Field(min_length=1, max_length=2000)
+    category: Literal["normal", "daily_report"] = "normal"
+    run_at: datetime
+
+    @field_validator("run_at")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("run_at must include a timezone")
+        return value
+
+
+class EnabledRequest(BaseModel):
+    enabled: bool
 
 
 def build_router(session_factory, state: RuntimeState) -> APIRouter:
@@ -109,5 +135,28 @@ def build_router(session_factory, state: RuntimeState) -> APIRouter:
             draft.review_status = "rejected"
             session.commit()
             return {"draft_id": draft.id, "status": "rejected"}
+
+    @router.post("/api/content-plans", status_code=201)
+    def create_content_plan(payload: ContentPlanRequest) -> dict:
+        with session_factory() as session:
+            row = ScheduledContentRecord(**payload.model_dump())
+            session.add(row)
+            try:
+                session.commit()
+            except IntegrityError as exc:
+                session.rollback()
+                raise HTTPException(status_code=409, detail="计划标识已存在") from exc
+            session.refresh(row)
+            return {"id": row.id, "status": "created"}
+
+    @router.post("/api/content-plans/{plan_id}/enabled")
+    def set_content_plan_enabled(plan_id: int, payload: EnabledRequest) -> dict:
+        with session_factory() as session:
+            row = session.get(ScheduledContentRecord, plan_id)
+            if row is None:
+                raise HTTPException(status_code=404, detail="内容计划不存在")
+            row.enabled = payload.enabled
+            session.commit()
+            return {"id": row.id, "enabled": row.enabled}
 
     return router

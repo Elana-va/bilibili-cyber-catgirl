@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}内容计划 · 小喵创作室{% endblock %}
+{% block page_title %}内容计划{% endblock %}
+{% block content %}
+  <section class="page-intro">
+    <div><p class="eyebrow">CONTENT CALENDAR</p><h2>安排猫娘的创作节奏</h2><p>保存计划只安排草稿生成，不会直接发布；生成后仍需进入审核中心。</p></div>
+    <button class="button button-primary" type="button" data-toggle-panel="new-plan">新建计划</button>
+  </section>
+
+  <section class="panel form-panel" id="new-plan" hidden>
+    <header class="panel-heading"><div><p class="eyebrow">NEW PLAN</p><h2>新建内容计划</h2></div></header>
+    <form class="plan-form" data-plan-form>
+      <label><span>计划标识</span><input name="schedule_key" minlength="3" maxlength="128" required placeholder="evening-hello"></label>
+      <label><span>内容类型</span><select name="category"><option value="normal">普通动态</option><option value="daily_report">互动日报</option></select></label>
+      <label><span>执行时间</span><input name="run_at" type="datetime-local" required></label>
+      <label class="form-wide"><span>创作要求</span><textarea name="prompt" required maxlength="2000" placeholder="写一条自然的晚间问候"></textarea></label>
+      <div class="form-wide form-actions"><button class="button button-secondary" type="button" data-toggle-panel="new-plan">取消</button><button class="button button-primary" type="submit">保存计划</button></div>
+    </form>
+  </section>
+
+  {% if plans %}
+    <div class="plan-grid">
+      {% for plan in plans %}
+        <article class="plan-card{% if not plan.enabled %} is-disabled{% endif %}">
+          <header><span class="type-badge">{{ "互动日报" if plan.category == "daily_report" else "普通动态" }}</span><span class="state-badge state-{{ 'active' if plan.enabled else 'disabled' }}">{{ "启用" if plan.enabled else "停用" }}</span></header>
+          <h2>{{ plan.schedule_key }}</h2><p>{{ plan.prompt }}</p>
+          <footer><time>{{ plan.run_at.strftime('%Y-%m-%d %H:%M') }}</time><button class="button button-secondary" type="button" data-plan-enabled="{{ plan.id }}" data-enabled="{{ 'false' if plan.enabled else 'true' }}">{{ "停用" if plan.enabled else "启用" }}</button></footer>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <article class="panel">{% with icon="✦", title="还没有内容计划", message="创建第一条计划，系统会在指定时间生成待审核草稿。" %}{% include "components/empty_state.html" %}{% endwith %}</article>
+  {% endif %}
+{% endblock %}

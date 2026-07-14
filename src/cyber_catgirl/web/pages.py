@@ -54,9 +54,17 @@ def build_page_router(session_factory, state) -> APIRouter:
         )
 
     @router.get("/content", response_class=HTMLResponse)
-    def content() -> str:
-        service.content_plans()
-        return "<h1>内容计划</h1>"
+    def content(request: Request):
+        return TEMPLATES.TemplateResponse(
+            request,
+            "content.html",
+            {
+                "plans": service.content_plans(),
+                "current_page": "content",
+                "run_mode": state.settings.run_mode.value,
+                "kill_switch": state.settings.kill_switch,
+            },
+        )
 
     @router.get("/analytics", response_class=HTMLResponse)
     def analytics() -> str:
