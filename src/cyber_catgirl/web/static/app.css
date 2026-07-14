@@ -1,0 +1,31 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #252038;
+  background: #f7f5ff;
+}
+
+main {
+  max-width: 960px;
+  margin: 40px auto;
+  padding: 0 24px;
+}
+
+.status {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+article {
+  padding: 16px;
+  margin: 12px 0;
+  border: 1px solid #ded8f2;
+  border-radius: 12px;
+  background: white;
+}
+
+button {
+  margin-right: 8px;
+  padding: 8px 14px;
+}

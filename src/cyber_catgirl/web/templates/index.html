@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>B站赛博猫娘管理台</title>
+    <link rel="stylesheet" href="/static/app.css">
+  </head>
+  <body>
+    <main>
+      <h1>B站赛博猫娘管理台</h1>
+      <section class="status">
+        <span>模式：{{ run_mode }}</span>
+        <span>紧急停止：{{ "开启" if kill_switch else "关闭" }}</span>
+        <span>异常任务：{{ failed_count }}</span>
+      </section>
+      <section>
+        <h2>待审核草稿</h2>
+        {% for draft in pending %}
+          <article>
+            <p>{{ draft.content }}</p>
+            <button data-approve="{{ draft.id }}">批准</button>
+            <button data-reject="{{ draft.id }}">拒绝</button>
+          </article>
+        {% else %}
+          <p>当前没有待审核草稿。</p>
+        {% endfor %}
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

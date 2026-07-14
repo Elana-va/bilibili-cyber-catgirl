@@ -34,6 +34,9 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 asyncio_mode = "auto"
+filterwarnings = [
+  "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
+]
 
 [tool.ruff]
 target-version = "py311"

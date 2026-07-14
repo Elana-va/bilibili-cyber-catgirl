@@ -109,3 +109,14 @@ class ScheduledContentRecord(Base):
     category: Mapped[str] = mapped_column(String(32), default="normal", nullable=False)
     run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+
+class SystemSettingRecord(Base):
+    __tablename__ = "system_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    setting_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    setting_value: Mapped[str] = mapped_column(String(256), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
