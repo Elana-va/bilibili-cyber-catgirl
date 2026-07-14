@@ -95,3 +95,13 @@ document.querySelectorAll("[data-plan-form]").forEach((form) => {
     await requestAction("/api/content-plans", { body: data, success: "内容计划已创建" });
   });
 });
+
+document.querySelectorAll("[data-settings-form]").forEach((form) => {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(form));
+    data.auto_reply_allowlist = data.auto_reply_allowlist.split(/\r?\n|,/).map((value) => value.trim()).filter(Boolean);
+    data.poll_seconds = Number(data.poll_seconds);
+    await requestAction("/api/system/settings", { body: data, success: "系统设置已保存" });
+  });
+});

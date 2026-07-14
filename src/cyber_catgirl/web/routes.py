@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -49,6 +49,20 @@ class ContentPlanRequest(BaseModel):
 
 class EnabledRequest(BaseModel):
     enabled: bool
+
+
+class SystemSettingsRequest(BaseModel):
+    run_mode: RunMode
+    auto_reply_allowlist: list[str] = Field(default_factory=list)
+    poll_seconds: int = Field(ge=30, le=3600)
+
+    @model_validator(mode="after")
+    def limited_auto_requires_allowlist(self):
+        normalized = {actor_id.strip() for actor_id in self.auto_reply_allowlist if actor_id.strip()}
+        self.auto_reply_allowlist = sorted(normalized)
+        if self.run_mode is RunMode.LIMITED_AUTO and not normalized:
+            raise ValueError("有限自动模式至少需要一个白名单用户")
+        return self
 
 
 def build_router(session_factory, state: RuntimeState) -> APIRouter:
@@ -158,5 +172,20 @@ def build_router(session_factory, state: RuntimeState) -> APIRouter:
             row.enabled = payload.enabled
             session.commit()
             return {"id": row.id, "enabled": row.enabled}
+
+    @router.post("/api/system/settings")
+    def update_system_settings(payload: SystemSettingsRequest) -> dict:
+        allowlist = set(payload.auto_reply_allowlist)
+        save_setting("run_mode", payload.run_mode.value)
+        save_setting("auto_reply_allowlist", ",".join(sorted(allowlist)))
+        save_setting("poll_seconds", str(payload.poll_seconds))
+        state.settings.run_mode = payload.run_mode
+        state.settings.auto_reply_allowlist = allowlist
+        state.settings.poll_seconds = payload.poll_seconds
+        return {
+            "run_mode": payload.run_mode.value,
+            "auto_reply_allowlist": sorted(allowlist),
+            "poll_seconds": payload.poll_seconds,
+        }
 
     return router

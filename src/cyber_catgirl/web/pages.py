@@ -1,4 +1,5 @@
 from pathlib import Path
+from os import getenv
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
@@ -83,12 +84,33 @@ def build_page_router(session_factory, state) -> APIRouter:
         )
 
     @router.get("/logs", response_class=HTMLResponse)
-    def logs() -> str:
-        service.logs(LogFilters())
-        return "<h1>运行日志</h1>"
+    def logs(request: Request, status: str | None = None, action: str | None = None):
+        filters = LogFilters(status=status or None, action=action or None)
+        return TEMPLATES.TemplateResponse(
+            request,
+            "logs.html",
+            {
+                "logs": service.logs(filters),
+                "filters": filters,
+                "current_page": "logs",
+                "run_mode": state.settings.run_mode.value,
+                "kill_switch": state.settings.kill_switch,
+            },
+        )
 
     @router.get("/settings", response_class=HTMLResponse)
-    def settings() -> str:
-        return f"<h1>系统设置</h1><p>{state.settings.run_mode.value}</p>"
+    def settings(request: Request):
+        return TEMPLATES.TemplateResponse(
+            request,
+            "settings.html",
+            {
+                "settings": state.settings,
+                "bilibili_configured": bool(getenv("BILI_SESSDATA") and getenv("BILI_JCT")),
+                "llm_configured": bool(getenv("DEEPSEEK_API_KEY")),
+                "current_page": "settings",
+                "run_mode": state.settings.run_mode.value,
+                "kill_switch": state.settings.kill_switch,
+            },
+        )
 
     return router

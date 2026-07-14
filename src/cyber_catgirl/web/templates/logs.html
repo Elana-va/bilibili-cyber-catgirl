@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}运行日志 · 小喵创作室{% endblock %}
+{% block page_title %}运行日志{% endblock %}
+{% block content %}
+  <section class="page-intro"><div><p class="eyebrow">AUDIT TRAIL</p><h2>每一次动作都有迹可循</h2><p>发布任务与脱敏审计记录统一展示；凭证值永远不会进入页面。</p></div><span class="count-chip">{{ logs|length }} 条记录</span></section>
+  <form class="filter-bar" method="get" action="/logs"><label><span>任务状态</span><select name="status"><option value="">全部</option>{% for value,label in [("succeeded","成功"),("failed","失败"),("visibility_unknown","待人工核验"),("cancelled","已取消")] %}<option value="{{ value }}"{% if filters.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><label><span>审计动作</span><input name="action" value="{{ filters.action or '' }}" placeholder="例如 connector_error"></label><button class="button button-secondary" type="submit">应用筛选</button><a class="clear-link" href="/logs">清除</a></form>
+  {% if logs %}<div class="log-list">{% for item in logs %}<article class="log-row"><span class="log-icon">{{ "↗" if item.kind == "publish" else "≡" }}</span><div><header><strong>{{ item.title }}</strong><span class="state-badge state-{{ item.status }}">{{ item.status }}</span></header><p>{{ item.detail }}</p>{% if item.status == 'visibility_unknown' %}<div class="safety-notice"><strong>人工核验</strong><span>平台可能已写入，请到 B站人工核验；系统不会自动重发。</span></div>{% endif %}<time>{{ item.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</time></div></article>{% endfor %}</div>{% else %}<article class="panel">{% with icon="≡", title="没有符合条件的日志", message="清除筛选，或等待新的运行事件。" %}{% include "components/empty_state.html" %}{% endwith %}</article>{% endif %}
+{% endblock %}

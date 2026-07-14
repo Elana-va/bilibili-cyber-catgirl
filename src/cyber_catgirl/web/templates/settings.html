@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}系统设置 · 小喵创作室{% endblock %}
+{% block page_title %}系统设置{% endblock %}
+{% block content %}
+  <section class="page-intro"><div><p class="eyebrow">SAFETY SETTINGS</p><h2>自动化必须有清晰边界</h2><p>凭证仅从本机进程环境读取；这里不会显示、复制或保存具体值。</p></div></section>
+  <div class="settings-grid">
+    <section class="panel"><header class="panel-heading"><div><p class="eyebrow">RUNTIME</p><h2>运行策略</h2></div></header><form class="settings-form" data-settings-form><label><span>运行模式</span><select name="run_mode"><option value="manual_only"{% if settings.run_mode.value == 'manual_only' %} selected{% endif %}>全人工</option><option value="limited_auto"{% if settings.run_mode.value == 'limited_auto' %} selected{% endif %}>白名单有限自动</option></select><small>有限自动必须配置至少一个用户 ID。</small></label><label><span>自动回复白名单</span><textarea name="auto_reply_allowlist" placeholder="每行一个 B站用户 ID">{{ settings.auto_reply_allowlist|sort|join('\n') }}</textarea><small>保存时自动去重和清理空白。</small></label><label><span>评论轮询间隔（秒）</span><input name="poll_seconds" type="number" min="30" max="3600" value="{{ settings.poll_seconds }}"></label><button class="button button-primary" type="submit">保存设置</button></form></section>
+    <section class="panel"><header class="panel-heading"><div><p class="eyebrow">CONNECTIONS</p><h2>连接状态</h2></div></header><div class="connection-list"><div><span class="connection-icon">B</span><span><strong>B站测试账号</strong><small>SESSDATA + BILI_JCT</small></span><span class="state-badge state-{{ 'active' if bilibili_configured else 'disabled' }}">{{ "已配置" if bilibili_configured else "未配置" }}</span></div><div><span class="connection-icon">AI</span><span><strong>DeepSeek 模型</strong><small>DEEPSEEK_API_KEY</small></span><span class="state-badge state-{{ 'active' if llm_configured else 'disabled' }}">{{ "已配置" if llm_configured else "未配置" }}</span></div></div><div class="privacy-note"><strong>凭证隔离</strong><p>后台只读取“是否存在”，不会把值发送到浏览器、模型上下文或审计日志。</p></div></section>
+  </div>
+{% endblock %}
