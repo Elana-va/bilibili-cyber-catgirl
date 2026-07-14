@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>{% block title %}小喵创作室{% endblock %}</title>
+    <link rel="stylesheet" href="/static/app.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="/" aria-label="小喵创作室首页">
+          <span class="brand-mark" aria-hidden="true">ฅ</span>
+          <span><strong>小喵创作室</strong><small>NEKO STUDIO</small></span>
+        </a>
+        <nav class="primary-nav" aria-label="主导航">
+          {% set links = [
+            ("dashboard", "/", "⌂", "工作台"),
+            ("reviews", "/reviews", "✓", "审核中心"),
+            ("content", "/content", "✦", "内容计划"),
+            ("analytics", "/analytics", "◫", "互动数据"),
+            ("logs", "/logs", "≡", "运行日志"),
+            ("settings", "/settings", "⚙", "系统设置")
+          ] %}
+          {% for key, href, icon, label in links %}
+            <a href="{{ href }}" class="nav-link{% if current_page == key %} is-active{% endif %}"{% if current_page == key %} aria-current="page"{% endif %}>
+              <span class="nav-icon" aria-hidden="true">{{ icon }}</span><span class="nav-label">{{ label }}</span>
+            </a>
+          {% endfor %}
+        </nav>
+        <div class="sidebar-status">
+          <span class="status-dot{% if kill_switch %} is-danger{% endif %}"></span>
+          <span><strong>{{ "已紧急停止" if kill_switch else "系统安全" }}</strong><small>{{ "禁止外部写入" if kill_switch else ("人工值守" if run_mode == "manual_only" else "白名单自动") }}</small></span>
+        </div>
+      </aside>
+
+      <div class="page-frame">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">NEKO OPERATIONS / {{ current_page | upper }}</p>
+            <h1>{% block page_title %}工作台{% endblock %}</h1>
+          </div>
+          <div class="topbar-actions">
+            <span class="state-pill{% if kill_switch %} is-danger{% endif %}"><span class="status-dot{% if kill_switch %} is-danger{% endif %}"></span>{{ "紧急停止中" if kill_switch else "安全运行" }}</span>
+            <button class="button button-danger-ghost" type="button" data-action="kill-switch" data-enabled="{{ 'false' if kill_switch else 'true' }}">
+              {{ "恢复控制" if kill_switch else "紧急停止" }}
+            </button>
+          </div>
+        </header>
+        <main id="main-content" tabindex="-1">
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+    </div>
+
+    <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-title">
+      <form method="dialog">
+        <span class="dialog-icon" aria-hidden="true">!</span>
+        <h2 id="confirm-title">确认操作</h2>
+        <p id="confirm-message">此操作会改变系统状态。</p>
+        <div class="dialog-actions">
+          <button class="button button-secondary" value="cancel">取消</button>
+          <button class="button button-primary" id="confirm-submit" value="confirm">确认</button>
+        </div>
+      </form>
+    </dialog>
+    <div class="toast-region" data-toast-region aria-live="polite" aria-atomic="true"></div>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}工作台 · 小喵创作室{% endblock %}
+{% block page_title %}早上好，指挥官{% endblock %}
+{% block content %}
+  <section class="hero-card">
+    <div class="hero-copy">
+      <p class="eyebrow">TODAY'S MISSION</p>
+      <h2>{% if overview.pending_reviews %}有 {{ overview.pending_reviews }} 条内容<br>等你审核喵{% else %}审核队列已经清空<br>可以稍作休息喵{% endif %}</h2>
+      <p>系统保持{{ "人工值守" if run_mode == "manual_only" else "白名单有限自动" }}，所有危险操作都由你掌控。</p>
+      <a class="button button-primary" href="/reviews">进入审核中心 <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="mascot-wrap" aria-hidden="true">
+      <span class="mascot-ring"></span>
+      <img src="/static/catgirl-mascot.png" alt="" class="mascot-image">
+    </div>
+  </section>
+
+  <section class="metric-grid" aria-label="今日概览">
+    <article class="metric-card"><span>新评论</span><strong data-metric="new-comments">{{ overview.new_comments }}</strong><small>已进入事件队列</small></article>
+    <article class="metric-card"><span>已回复</span><strong data-metric="replied-today">{{ overview.replied_today }}</strong><small>平台核验成功</small></article>
+    <article class="metric-card is-accent"><span>待审核</span><strong data-metric="pending-reviews">{{ overview.pending_reviews }}</strong><small>需要人工确认</small></article>
+    <article class="metric-card{% if overview.failed_jobs %} is-danger{% endif %}"><span>异常任务</span><strong data-metric="failed-jobs">{{ overview.failed_jobs }}</strong><small>{{ "请尽快检查" if overview.failed_jobs else "运行正常" }}</small></article>
+  </section>
+
+  <section class="dashboard-columns">
+    <article class="panel">
+      <header class="panel-heading"><div><p class="eyebrow">REVIEW QUEUE</p><h2>最新审核</h2></div><a href="/reviews">查看全部 →</a></header>
+      {% if overview.recent_reviews %}
+        <div class="review-list">
+          {% for draft in overview.recent_reviews %}
+            <a class="review-row" href="/reviews#draft-{{ draft.id }}">
+              <span class="review-avatar">{{ "报" if draft.draft_type == "daily_report" else "喵" }}</span>
+              <span class="review-copy"><strong>{{ draft.content }}</strong><small>{{ draft.draft_type }} · {{ draft.created_at.strftime('%m-%d %H:%M') }}</small></span>
+              <span class="risk-badge risk-{{ draft.risk_level }}">{{ {"low":"低风险", "medium":"中风险", "high":"高风险"}.get(draft.risk_level, draft.risk_level) }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        {% with icon="✓", title="审核队列是空的", message="新草稿生成后会出现在这里。" %}{% include "components/empty_state.html" %}{% endwith %}
+      {% endif %}
+    </article>
+
+    <article class="panel">
+      <header class="panel-heading"><div><p class="eyebrow">ACTIVITY</p><h2>运行动态</h2></div><a href="/logs">查看日志 →</a></header>
+      {% if overview.recent_activity %}
+        <ol class="activity-list">
+          {% for item in overview.recent_activity %}<li><span></span><div><strong>{{ item.title }}</strong><small>{{ item.created_at.strftime('%m-%d %H:%M') }} · {{ item.status }}</small></div></li>{% endfor %}
+        </ol>
+      {% else %}
+        {% with icon="•", title="还没有运行记录", message="采集、审核和发布事件会记录在这里。" %}{% include "components/empty_state.html" %}{% endwith %}
+      {% endif %}
+    </article>
+  </section>
+{% endblock %}

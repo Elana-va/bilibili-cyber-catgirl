@@ -1,8 +1,14 @@
-from fastapi import APIRouter
+from pathlib import Path
+
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 from cyber_catgirl.services.dashboard import DashboardService
 from cyber_catgirl.web.view_models import LogFilters, ReviewFilters
+
+
+TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 
 def build_page_router(session_factory, state) -> APIRouter:
@@ -10,9 +16,18 @@ def build_page_router(session_factory, state) -> APIRouter:
     service = DashboardService(session_factory)
 
     @router.get("/", response_class=HTMLResponse)
-    def dashboard() -> str:
+    def dashboard(request: Request):
         view = service.overview()
-        return f"<h1>小喵创作室</h1><p>待审核 {view.pending_reviews}</p>"
+        return TEMPLATES.TemplateResponse(
+            request,
+            "dashboard.html",
+            {
+                "overview": view,
+                "current_page": "dashboard",
+                "run_mode": state.settings.run_mode.value,
+                "kill_switch": state.settings.kill_switch,
+            },
+        )
 
     @router.get("/reviews", response_class=HTMLResponse)
     def reviews() -> str:
