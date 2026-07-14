@@ -48,7 +48,7 @@ async def test_low_risk_reply_creates_one_publish_job():
         session_factory,
         StaticAgent(),
         MemoryService(session_factory),
-        SafetyEngine(run_mode=RunMode.LIMITED_AUTO),
+        SafetyEngine(run_mode=RunMode.LIMITED_AUTO, allowed_actor_ids={"u1"}),
     )
 
     await service.process_event("comment_1")

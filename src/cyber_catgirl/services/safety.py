@@ -41,9 +41,16 @@ class SafetyVerdict:
 
 
 class SafetyEngine:
-    def __init__(self, *, run_mode: RunMode, kill_switch: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        run_mode: RunMode,
+        kill_switch: bool = False,
+        allowed_actor_ids: set[str] | None = None,
+    ) -> None:
         self.run_mode = run_mode
         self.kill_switch = kill_switch
+        self.allowed_actor_ids = allowed_actor_ids or set()
 
     def evaluate(
         self,
@@ -58,6 +65,8 @@ class SafetyEngine:
             reasons.append("kill_switch")
         if self.run_mode is not RunMode.LIMITED_AUTO:
             reasons.append("manual_only")
+        if event.actor_id not in self.allowed_actor_ids:
+            reasons.append("actor_not_allowlisted")
         if any(marker.replace(" ", "") in normalized_input for marker in PROMPT_INJECTION_MARKERS):
             reasons.append("prompt_injection")
         if any(marker in normalized_input for marker in HIGH_RISK_MARKERS):

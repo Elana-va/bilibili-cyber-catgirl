@@ -15,9 +15,15 @@ class Settings(BaseModel):
     poll_seconds: int = Field(default=60, ge=30)
     database_url: str = "sqlite:///./data/cyber_catgirl.db"
     timezone: str = "Asia/Shanghai"
+    auto_reply_allowlist: set[str] = Field(default_factory=set)
 
     @classmethod
     def from_env(cls) -> "Settings":
+        allowlist = {
+            actor_id.strip()
+            for actor_id in getenv("CATGIRL_AUTO_REPLY_ALLOWLIST", "").split(",")
+            if actor_id.strip()
+        }
         return cls(
             run_mode=getenv("CATGIRL_RUN_MODE", RunMode.MANUAL_ONLY),
             kill_switch=getenv("CATGIRL_KILL_SWITCH", "false").lower() == "true",
@@ -25,4 +31,5 @@ class Settings(BaseModel):
             database_url=getenv(
                 "CATGIRL_DATABASE_URL", "sqlite:///./data/cyber_catgirl.db"
             ),
+            auto_reply_allowlist=allowlist,
         )
