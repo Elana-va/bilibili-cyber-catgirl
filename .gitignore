@@ -1,0 +1,12 @@
+.worktrees/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.py[cod]
+.env
+data/
+artifacts/
+dist/
+build/
+*.egg-info/
