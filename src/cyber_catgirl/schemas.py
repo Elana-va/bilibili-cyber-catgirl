@@ -1,0 +1,42 @@
+from datetime import datetime
+from enum import StrEnum
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class ActionType(StrEnum):
+    REPLY = "reply"
+    DRAFT_DYNAMIC = "draft_dynamic"
+    IGNORE = "ignore"
+    ESCALATE = "escalate"
+
+
+class RiskLevel(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class InteractionEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: str = Field(min_length=3, max_length=128)
+    event_type: str = Field(min_length=3, max_length=64)
+    actor_id: str = Field(min_length=1, max_length=64)
+    actor_name: str = Field(max_length=128)
+    content: str = Field(max_length=5000)
+    target_type: str = Field(min_length=1, max_length=64)
+    target_id: str = Field(min_length=1, max_length=128)
+    parent_comment_id: str | None = Field(default=None, max_length=128)
+    platform_created_at: datetime
+
+
+class AgentDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: ActionType
+    content: str = Field(max_length=500)
+    risk_level: RiskLevel
+    reason: str = Field(min_length=1, max_length=500)
+    memory_updates: list[str] = Field(default_factory=list)
+    requires_human_review: bool = True
