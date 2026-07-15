@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from fastapi.testclient import TestClient
@@ -22,6 +23,12 @@ class StubRuntime:
 
     def request_manual_cycle(self):
         return self.accept_sync
+
+
+class LoopAwareRuntime(StubRuntime):
+    def request_manual_cycle(self):
+        asyncio.get_running_loop()
+        return True
 
 
 class StubScheduler:
@@ -91,6 +98,22 @@ def test_sync_is_queued_and_duplicate_request_is_rejected():
 
     assert accepted.status_code == 202
     assert duplicate.status_code == 409
+
+
+def test_sync_endpoint_queues_work_on_the_application_event_loop():
+    sessions = create_session_factory("sqlite+pysqlite:///:memory:")
+    runtime = LoopAwareRuntime()
+    app = create_app(
+        Settings(),
+        session_factory=sessions,
+        monitor_runtime=runtime,
+        scheduler_factory=lambda _: StubScheduler(),
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/api/comment-monitor/sync")
+
+    assert response.status_code == 202
 
 
 def test_enabling_auto_reply_requires_limited_mode_and_write_authorization():

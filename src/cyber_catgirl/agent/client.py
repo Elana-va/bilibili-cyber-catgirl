@@ -1,3 +1,4 @@
+import json
 from typing import Protocol
 
 import httpx
@@ -17,21 +18,37 @@ class DeepSeekClient:
         base_url: str = "https://api.deepseek.com",
         model: str = DEFAULT_MODEL,
         timeout_seconds: float = 30.0,
+        transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout_seconds = timeout_seconds
+        self.transport = transport
 
     async def generate_json(self, messages: list[dict], schema: dict) -> dict:
         headers = {"Authorization": f"Bearer {self.api_key}"}
+        schema_json = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
         payload = {
             "model": self.model,
-            "messages": messages,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "Return exactly one JSON object matching this JSON Schema. "
+                        "Do not add fields outside the schema. JSON Schema:\n"
+                        f"{schema_json}"
+                    ),
+                },
+                *messages,
+            ],
             "response_format": {"type": "json_object"},
             "temperature": 0.6,
         }
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with httpx.AsyncClient(
+            timeout=self.timeout_seconds,
+            transport=self.transport,
+        ) as client:
             response = await client.post(
                 f"{self.base_url}/chat/completions", headers=headers, json=payload
             )

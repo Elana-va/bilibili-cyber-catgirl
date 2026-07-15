@@ -96,7 +96,7 @@ def build_comment_monitor_router(session_factory, state, runtime) -> APIRouter:
         return {"enabled": False}
 
     @router.post("/api/comment-monitor/sync", status_code=202)
-    def sync_now() -> dict:
+    async def sync_now() -> dict:
         if not runtime.request_manual_cycle():
             raise HTTPException(status_code=409, detail="同步任务正在运行")
         audit.record("comment_monitor_sync_requested", "comment-monitor", {})
