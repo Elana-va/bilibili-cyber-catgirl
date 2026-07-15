@@ -26,13 +26,14 @@ NOW = datetime(2026, 7, 15, 8, 0, tzinfo=timezone.utc)
 
 class FriendlyLlm:
     async def generate_json(self, messages, schema):
+        is_technical = "接入" in messages[1]["content"]
         return AgentDecision(
             action="reply",
-            content="通过受控评论接口接入喵。",
+            content="小伙伴，通过受控评论接口接入喵，生成后还会人工审核喵。",
             risk_level="low",
             reason="普通问答",
             requires_human_review=False,
-            scene="casual",
+            scene="technical" if is_technical else "casual",
             address="partner",
             emoticon="",
         ).model_dump(mode="json")
@@ -115,7 +116,10 @@ async def test_discover_monitor_generate_review_without_real_write(tmp_path):
     assert result.events_inserted == 2
     assert result.generation_started == 2
     with sessions() as session:
-        assert session.scalar(select(func.count()).select_from(DraftRecord)) == 2
+        drafts = session.scalars(select(DraftRecord).order_by(DraftRecord.id)).all()
+        assert len(drafts) == 2
+        assert {draft.agent_version for draft in drafts} == {"catgirl-v2"}
+        assert all("喵" in draft.content for draft in drafts)
         assert session.scalar(select(func.count()).select_from(PublishJobRecord)) == 0
     assert connector.write_calls == []
 

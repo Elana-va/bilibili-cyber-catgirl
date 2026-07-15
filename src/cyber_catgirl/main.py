@@ -127,6 +127,16 @@ def create_app(
     return application
 
 
+def _build_catgirl_agent(llm, session_factory):
+    from cyber_catgirl.agent.service import CatgirlAgent
+    from cyber_catgirl.services.style_history import StyleHistoryService
+
+    return CatgirlAgent(
+        llm,
+        style_history=StyleHistoryService(session_factory),
+    )
+
+
 def _build_default_monitor_runtime(
     session_factory,
     settings,
@@ -135,7 +145,6 @@ def _build_default_monitor_runtime(
 ):
     from bilibili_api import Credential
 
-    from cyber_catgirl.agent.service import CatgirlAgent
     from cyber_catgirl.connectors.bilibili_api import BilibiliApiConnector
     from cyber_catgirl.services.comment_monitor import CommentMonitorService
     from cyber_catgirl.services.content_discovery import ContentDiscoveryService
@@ -171,7 +180,7 @@ def _build_default_monitor_runtime(
 
     reply_service = ReplyService(
         session_factory,
-        CatgirlAgent(llm),
+        _build_catgirl_agent(llm, session_factory),
         MemoryService(session_factory),
         SafetyEngine(
             run_mode=settings.run_mode,
