@@ -27,6 +27,8 @@ async def replay_events(
     run_mode: RunMode = RunMode.MANUAL_ONLY,
     kill_switch: bool = False,
     allowed_actor_ids: set[str] | None = None,
+    comment_auto_reply_enabled: bool = False,
+    write_enabled: bool = False,
 ) -> ReplayResult:
     """Run one deterministic ingest-to-publish cycle for fixtures or dry runs."""
     ingestion = await IngestionService(connector, session_factory).poll_once(None)
@@ -38,6 +40,8 @@ async def replay_events(
             run_mode=run_mode,
             kill_switch=kill_switch,
             allowed_actor_ids=allowed_actor_ids,
+            comment_auto_reply_enabled=comment_auto_reply_enabled,
+            write_enabled=write_enabled,
         ),
     )
 

@@ -47,10 +47,22 @@ class SafetyEngine:
         run_mode: RunMode,
         kill_switch: bool = False,
         allowed_actor_ids: set[str] | None = None,
+        comment_auto_reply_enabled: bool = False,
+        write_enabled: bool = False,
+        min_reply_interval_seconds: int = 8,
+        user_daily_limit: int = 10,
+        account_hourly_limit: int = 60,
+        account_daily_limit: int = 300,
     ) -> None:
         self.run_mode = run_mode
         self.kill_switch = kill_switch
         self.allowed_actor_ids = allowed_actor_ids or set()
+        self.comment_auto_reply_enabled = comment_auto_reply_enabled
+        self.write_enabled = write_enabled
+        self.min_reply_interval_seconds = min_reply_interval_seconds
+        self.user_daily_limit = user_daily_limit
+        self.account_hourly_limit = account_hourly_limit
+        self.account_daily_limit = account_daily_limit
 
     def evaluate(
         self,
@@ -65,9 +77,14 @@ class SafetyEngine:
             reasons.append("kill_switch")
         if self.run_mode is not RunMode.LIMITED_AUTO:
             reasons.append("manual_only")
-        if event.actor_id not in self.allowed_actor_ids:
-            reasons.append("actor_not_allowlisted")
-        if any(marker.replace(" ", "") in normalized_input for marker in PROMPT_INJECTION_MARKERS):
+        if not self.comment_auto_reply_enabled:
+            reasons.append("comment_auto_reply_disabled")
+        if not self.write_enabled:
+            reasons.append("bilibili_write_disabled")
+        if any(
+            marker.replace(" ", "") in normalized_input
+            for marker in PROMPT_INJECTION_MARKERS
+        ):
             reasons.append("prompt_injection")
         if any(marker in normalized_input for marker in HIGH_RISK_MARKERS):
             reasons.append("high_risk_topic")
@@ -77,20 +94,22 @@ class SafetyEngine:
             reasons.append("model_risk")
         if decision.requires_human_review:
             reasons.append("model_requested_review")
-        if len(decision.content) > 120:
+        if not decision.content.strip():
+            reasons.append("empty_reply")
+        if len(decision.content) > 180:
             reasons.append("reply_too_long")
 
         rate_limited = False
         if (
             counters.last_auto_reply_seconds_ago is not None
-            and counters.last_auto_reply_seconds_ago < 600
+            and counters.last_auto_reply_seconds_ago < self.min_reply_interval_seconds
         ):
             rate_limited = True
-        if counters.user_auto_replies_today >= 5:
+        if counters.user_auto_replies_today >= self.user_daily_limit:
             rate_limited = True
-        if counters.account_auto_replies_hour >= 20:
+        if counters.account_auto_replies_hour >= self.account_hourly_limit:
             rate_limited = True
-        if counters.account_auto_replies_today >= 100:
+        if counters.account_auto_replies_today >= self.account_daily_limit:
             rate_limited = True
         if rate_limited:
             reasons.append("rate_limited")

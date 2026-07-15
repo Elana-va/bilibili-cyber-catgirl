@@ -38,6 +38,8 @@ async def test_replay_is_idempotent_and_risky_input_never_auto_publishes():
         FriendlyAgent(),
         run_mode=RunMode.LIMITED_AUTO,
         allowed_actor_ids={"u100"},
+        comment_auto_reply_enabled=True,
+        write_enabled=True,
     )
     second = await replay_events(
         session_factory,
@@ -45,6 +47,8 @@ async def test_replay_is_idempotent_and_risky_input_never_auto_publishes():
         FriendlyAgent(),
         run_mode=RunMode.LIMITED_AUTO,
         allowed_actor_ids={"u100"},
+        comment_auto_reply_enabled=True,
+        write_enabled=True,
     )
 
     with session_factory() as session:
@@ -71,6 +75,8 @@ async def test_kill_switch_prevents_all_external_writes():
         run_mode=RunMode.LIMITED_AUTO,
         allowed_actor_ids={"u100"},
         kill_switch=True,
+        comment_auto_reply_enabled=True,
+        write_enabled=True,
     )
 
     assert result.publications_succeeded == 0
