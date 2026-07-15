@@ -53,6 +53,24 @@ class RecordingDiscovery:
         return object()
 
 
+class ConcurrencyRecordingDiscovery(RecordingDiscovery):
+    def __init__(self):
+        super().__init__()
+        self.active = 0
+        self.max_observed_concurrency = 0
+
+    async def run_once(self, now):
+        self.calls += 1
+        self.active += 1
+        self.max_observed_concurrency = max(
+            self.max_observed_concurrency,
+            self.active,
+        )
+        await asyncio.sleep(0.01)
+        self.active -= 1
+        return object()
+
+
 class RiskControlPublisher(RecordingPublisher):
     async def execute(self, job_id: int, now: datetime | None = None):
         self.executed_job_ids.append(job_id)
@@ -151,6 +169,20 @@ async def test_manual_sync_discovers_content_before_polling():
     await asyncio.sleep(0)
 
     assert discovery.calls == 1
+
+
+async def test_manual_and_scheduled_content_discovery_are_serialized():
+    fixture = make_runtime()
+    discovery = ConcurrencyRecordingDiscovery()
+    fixture.runtime.content_discovery = discovery
+
+    await asyncio.gather(
+        fixture.runtime.discover_contents(force=True),
+        fixture.runtime.discover_contents(force=True),
+    )
+
+    assert discovery.calls == 2
+    assert discovery.max_observed_concurrency == 1
 
 
 async def test_cycle_stops_remaining_writes_after_platform_risk_control():

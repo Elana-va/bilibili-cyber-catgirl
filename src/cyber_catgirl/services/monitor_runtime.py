@@ -41,6 +41,7 @@ class MonitorRuntime:
         self.content_discovery = content_discovery
         self.prepare = prepare or (lambda: None)
         self._cycle_lock = asyncio.Lock()
+        self._discovery_lock = asyncio.Lock()
         self._manual_pending = False
 
     async def run_cycle(
@@ -101,10 +102,13 @@ class MonitorRuntime:
             return None
         if not force and not self.settings.comment_monitor_enabled:
             return None
-        self.prepare()
-        return await self.content_discovery.run_once(
-            now or datetime.now(timezone.utc)
-        )
+        async with self._discovery_lock:
+            if not force and not self.settings.comment_monitor_enabled:
+                return None
+            self.prepare()
+            return await self.content_discovery.run_once(
+                now or datetime.now(timezone.utc)
+            )
 
     def request_manual_cycle(self) -> bool:
         if self._manual_pending or self._cycle_lock.locked():
