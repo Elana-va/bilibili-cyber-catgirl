@@ -1,6 +1,4 @@
 from pathlib import Path
-from os import getenv
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -106,7 +104,7 @@ def build_page_router(session_factory, state) -> APIRouter:
             {
                 "settings": state.settings,
                 "bilibili_configured": state.account_service.configured(),
-                "llm_configured": bool(getenv("DEEPSEEK_API_KEY")),
+                "llm_configured": state.deepseek_service.configured(),
                 "current_page": "settings",
                 "run_mode": state.settings.run_mode.value,
                 "kill_switch": state.settings.kill_switch,

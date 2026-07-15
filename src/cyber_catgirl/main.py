@@ -1,4 +1,5 @@
 from pathlib import Path
+from os import getenv
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -9,10 +10,19 @@ from cyber_catgirl.connectors.bilibili_login import (
     BilibiliQrSdkAdapter,
 )
 from cyber_catgirl.db import create_session_factory
-from cyber_catgirl.security.credential_store import CredentialStore, DpapiProtector
+from cyber_catgirl.security.credential_store import (
+    CredentialStore,
+    DeepSeekCredentialStore,
+    DpapiProtector,
+)
 from cyber_catgirl.services.bilibili_account import (
     BilibiliAccountService,
     BilibiliIdentityProbe,
+)
+from cyber_catgirl.services.deepseek_connection import (
+    DEFAULT_MODEL,
+    DeepSeekConnectionService,
+    DeepSeekModelsProbe,
 )
 from cyber_catgirl.web.routes import RuntimeState, build_router
 
@@ -24,6 +34,7 @@ def create_app(
     credential_store=None,
     login_manager=None,
     account_service=None,
+    deepseek_service=None,
 ) -> FastAPI:
     settings = settings or Settings.from_env()
     if session_factory is None:
@@ -40,12 +51,23 @@ def create_app(
         account_service = BilibiliAccountService(
             credential_store, BilibiliIdentityProbe()
         )
+    if deepseek_service is None:
+        deepseek_store = DeepSeekCredentialStore(
+            Path("data/secrets/deepseek-credential.bin"), DpapiProtector()
+        )
+        deepseek_service = DeepSeekConnectionService(
+            deepseek_store,
+            DeepSeekModelsProbe(),
+            env_api_key=getenv("DEEPSEEK_API_KEY"),
+            env_model=getenv("DEEPSEEK_MODEL", DEFAULT_MODEL),
+        )
 
     application = FastAPI(title="B站赛博猫娘管理台", version="0.1.0")
     application.state.runtime = RuntimeState(
         settings=settings,
         login_manager=login_manager,
         account_service=account_service,
+        deepseek_service=deepseek_service,
     )
     application.state.session_factory = session_factory
     application.include_router(build_router(session_factory, application.state.runtime))
