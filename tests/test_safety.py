@@ -27,6 +27,9 @@ def low_risk_decision() -> AgentDecision:
         risk_level="low",
         reason="普通问候",
         requires_human_review=False,
+        scene="greeting",
+        address="partner",
+        emoticon="",
     )
 
 

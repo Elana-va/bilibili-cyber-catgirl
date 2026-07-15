@@ -21,6 +21,9 @@ class StaticAgent:
             risk_level="low",
             reason="普通问候",
             requires_human_review=False,
+            scene="greeting",
+            address="partner",
+            emoticon="",
         )
 
 
@@ -32,6 +35,9 @@ class IgnoreAgent:
             risk_level="low",
             reason="无需回复",
             requires_human_review=False,
+            scene="casual",
+            address="none",
+            emoticon="",
         )
 
 

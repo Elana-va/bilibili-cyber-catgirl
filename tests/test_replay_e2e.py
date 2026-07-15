@@ -20,6 +20,9 @@ class FriendlyAgent:
             risk_level="low",
             reason="普通互动",
             requires_human_review=False,
+            scene="casual",
+            address="partner",
+            emoticon="",
         )
 
 

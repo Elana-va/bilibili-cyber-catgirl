@@ -19,6 +19,19 @@ def test_unknown_agent_action_is_rejected():
         )
 
 
+def test_agent_decision_requires_persona_scene_and_address():
+    with pytest.raises(ValidationError):
+        AgentDecision.model_validate(
+            {
+                "action": "reply",
+                "content": "你好喵",
+                "risk_level": "low",
+                "reason": "问候",
+                "requires_human_review": True,
+            }
+        )
+
+
 def test_event_requires_stable_platform_id():
     event = InteractionEvent(
         event_id="comment_123",

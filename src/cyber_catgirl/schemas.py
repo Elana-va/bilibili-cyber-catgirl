@@ -18,6 +18,26 @@ class RiskLevel(StrEnum):
     HIGH = "high"
 
 
+class PersonaScene(StrEnum):
+    GREETING = "greeting"
+    PRAISE = "praise"
+    CASUAL = "casual"
+    JOKE = "joke"
+    QA = "qa"
+    TECHNICAL = "technical"
+    CORRECTION = "correction"
+    IDENTITY = "identity"
+    SERIOUS = "serious"
+    SAFETY = "safety"
+    UNKNOWN = "unknown"
+
+
+class AddressMode(StrEnum):
+    NONE = "none"
+    PARTNER = "partner"
+    MASTER = "master"
+
+
 class InteractionEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -53,3 +73,6 @@ class AgentDecision(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
     memory_updates: list[str] = Field(default_factory=list)
     requires_human_review: bool = True
+    scene: PersonaScene
+    address: AddressMode
+    emoticon: str = Field(default="", max_length=32)

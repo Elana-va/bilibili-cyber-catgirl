@@ -32,6 +32,9 @@ class FriendlyLlm:
             risk_level="low",
             reason="普通问答",
             requires_human_review=False,
+            scene="casual",
+            address="partner",
+            emoticon="",
         ).model_dump(mode="json")
 
 

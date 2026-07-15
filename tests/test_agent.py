@@ -50,6 +50,9 @@ async def test_valid_low_risk_reply_is_preserved():
                 "reason": "普通问候",
                 "memory_updates": [],
                 "requires_human_review": False,
+                "scene": "greeting",
+                "address": "partner",
+                "emoticon": "",
             }
         )
     )
@@ -69,6 +72,9 @@ async def test_model_payload_excludes_private_platform_identifiers():
             "reason": "普通互动",
             "memory_updates": [],
             "requires_human_review": False,
+            "scene": "greeting",
+            "address": "partner",
+            "emoticon": "",
         }
     )
     agent = CatgirlAgent(llm)
