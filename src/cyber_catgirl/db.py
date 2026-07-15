@@ -14,9 +14,14 @@ def create_session_factory(database_url: str):
     if database_url.endswith(":memory:"):
         engine_kwargs["poolclass"] = StaticPool
 
-    engine = create_engine(database_url, **engine_kwargs)
-
     from cyber_catgirl import models  # noqa: F401
 
-    Base.metadata.create_all(engine)
+    if database_url.endswith(":memory:"):
+        engine = create_engine(database_url, **engine_kwargs)
+        Base.metadata.create_all(engine)
+    else:
+        from cyber_catgirl.services.migrations import upgrade_database
+
+        upgrade_database(database_url)
+        engine = create_engine(database_url, **engine_kwargs)
     return sessionmaker(bind=engine, expire_on_commit=False)

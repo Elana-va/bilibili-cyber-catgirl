@@ -18,6 +18,11 @@ class EventRecord(Base):
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     payload_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="new", nullable=False)
+    priority: Mapped[str] = mapped_column(String(16), default="normal", nullable=False)
+    monitored_content_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    processing_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error_code: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
@@ -33,7 +38,11 @@ class DraftRecord(Base):
     review_status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False)
     agent_version: Mapped[str] = mapped_column(String(64), default="catgirl-v1", nullable=False)
     stats_snapshot_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    safety_reasons_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
 
 
 class PublishJobRecord(Base):
@@ -45,7 +54,45 @@ class PublishJobRecord(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     platform_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    source: Mapped[str] = mapped_column(String(16), default="manual", nullable=False)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error_code: Mapped[str | None] = mapped_column(String(64))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class MonitoredContentRecord(Base):
+    __tablename__ = "monitored_contents"
+    __table_args__ = (
+        UniqueConstraint("platform_content_id", name="uq_content_platform_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    platform_content_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    display_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    comment_oid: Mapped[str] = mapped_column(String(128), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    title: Mapped[str] = mapped_column(String(256), default="", nullable=False)
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    last_discovered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
+    last_polled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_poll_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failure_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class MonitorCheckpointRecord(Base):
+    __tablename__ = "monitor_checkpoints"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    checkpoint_key: Mapped[str] = mapped_column(String(192), unique=True, nullable=False)
+    cursor_value: Mapped[str | None] = mapped_column(String(512))
+    state_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
 
 
 class AuditLogRecord(Base):
