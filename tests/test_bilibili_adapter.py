@@ -24,7 +24,7 @@ class FakeSdk:
             ]
         }
 
-    async def send_comment(self, text, oid, resource_type, root, credential):
+    async def send_comment(self, text, oid, resource_type, root, parent, credential):
         if self.raise_next:
             raise self.raise_next
         return {"rpid": 202}
