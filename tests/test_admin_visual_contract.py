@@ -56,6 +56,7 @@ def test_styles_include_mobile_and_reduced_motion_contracts():
     assert "prefers-reduced-motion: reduce" in css
     assert ":focus-visible" in css
     assert "[hidden]{display:none!important}" in css
+    assert ".deepseek-connect-form{display:grid;grid-template-columns:1fr" in css
 
 
 def test_settings_contains_accessible_bilibili_login_dialog():
