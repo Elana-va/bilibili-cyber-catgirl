@@ -105,7 +105,7 @@ def build_page_router(session_factory, state) -> APIRouter:
             "settings.html",
             {
                 "settings": state.settings,
-                "bilibili_configured": bool(getenv("BILI_SESSDATA") and getenv("BILI_JCT")),
+                "bilibili_configured": state.account_service.configured(),
                 "llm_configured": bool(getenv("DEEPSEEK_API_KEY")),
                 "current_page": "settings",
                 "run_mode": state.settings.run_mode.value,
