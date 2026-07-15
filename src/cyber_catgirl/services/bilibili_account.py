@@ -71,9 +71,12 @@ class BilibiliIdentityProbe:
         )
         payload = await user.get_self_info(sdk_credential)
         avatar = payload.get("face")
+        account_name = payload.get("name") or payload.get("uname")
+        if not account_name:
+            raise KeyError("B站身份响应缺少账号名称")
         return AccountIdentity(
             uid=str(payload["mid"]),
-            name=str(payload["uname"]),
+            name=str(account_name),
             avatar_url=str(avatar) if avatar else None,
         )
 

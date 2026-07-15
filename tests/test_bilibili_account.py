@@ -4,6 +4,7 @@ from cyber_catgirl.security.credential_store import BilibiliCredentialData
 from cyber_catgirl.services.bilibili_account import (
     AccountIdentity,
     BilibiliAccountService,
+    BilibiliIdentityProbe,
     ConnectionView,
     EnvironmentCredentialManaged,
     load_credential_data,
@@ -119,3 +120,24 @@ def test_environment_managed_credentials_cannot_be_deleted_by_web():
 
     with pytest.raises(EnvironmentCredentialManaged):
         service.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_identity_probe_accepts_current_bilibili_name_field(monkeypatch):
+    async def current_self_info_response(credential):
+        return {
+            "mid": 123,
+            "name": "当前字段账号",
+            "face": "https://i.example/current.jpg",
+        }
+
+    monkeypatch.setattr(
+        "cyber_catgirl.services.bilibili_account.user.get_self_info",
+        current_self_info_response,
+    )
+
+    identity = await BilibiliIdentityProbe().fetch(SECRET)
+
+    assert identity == AccountIdentity(
+        "123", "当前字段账号", "https://i.example/current.jpg"
+    )
