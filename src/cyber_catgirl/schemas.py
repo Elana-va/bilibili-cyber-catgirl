@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,8 +28,20 @@ class InteractionEvent(BaseModel):
     content: str = Field(max_length=5000)
     target_type: str = Field(min_length=1, max_length=64)
     target_id: str = Field(min_length=1, max_length=128)
+    root_comment_id: str | None = Field(default=None, max_length=128)
     parent_comment_id: str | None = Field(default=None, max_length=128)
     platform_created_at: datetime
+
+
+class PlatformContentTarget(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    platform_content_id: str = Field(min_length=1, max_length=128)
+    display_type: Literal["video", "dynamic_text", "dynamic_draw"]
+    comment_oid: str = Field(min_length=1, max_length=128)
+    resource_type: Literal["video", "article", "dynamic", "dynamic_draw"]
+    title: str = Field(default="", max_length=256)
+    published_at: datetime
 
 
 class AgentDecision(BaseModel):
