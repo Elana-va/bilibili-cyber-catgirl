@@ -4,7 +4,30 @@ from sqlalchemy import select
 from cyber_catgirl.config import Settings
 from cyber_catgirl.db import create_session_factory
 from cyber_catgirl.main import create_app
-from cyber_catgirl.models import DraftRecord, PublishJobRecord
+from cyber_catgirl.models import DraftRecord, PublishJobRecord, SystemSettingRecord
+
+
+class RecordingScheduler:
+    def __init__(self):
+        self.started = False
+        self.stopped = False
+
+    def start(self):
+        self.started = True
+
+    def shutdown(self, wait: bool = True):
+        self.stopped = True
+
+
+class StubMonitorRuntime:
+    def __init__(self, settings: Settings):
+        self.settings = settings
+
+    async def run_cycle(self):
+        return None
+
+    async def discover_contents(self):
+        return None
 
 
 def make_client():
@@ -58,3 +81,38 @@ def test_health_defaults_to_manual_mode():
 
     assert response.status_code == 200
     assert response.json()["run_mode"] == "manual_only"
+
+
+def test_app_lifespan_starts_and_stops_scheduler():
+    scheduler = RecordingScheduler()
+    runtime = StubMonitorRuntime(Settings())
+    app = create_app(
+        Settings(),
+        monitor_runtime=runtime,
+        scheduler_factory=lambda _: scheduler,
+    )
+
+    with TestClient(app):
+        assert scheduler.started is True
+    assert scheduler.stopped is True
+
+
+def test_persisted_monitor_setting_is_loaded_on_restart():
+    sessions = create_session_factory("sqlite+pysqlite:///:memory:")
+    with sessions.begin() as session:
+        session.add(
+            SystemSettingRecord(
+                setting_key="comment_monitor_enabled", setting_value="true"
+            )
+        )
+    runtime = StubMonitorRuntime(Settings(comment_monitor_enabled=False))
+
+    app = create_app(
+        Settings(comment_monitor_enabled=False),
+        session_factory=sessions,
+        monitor_runtime=runtime,
+        scheduler_factory=lambda _: RecordingScheduler(),
+    )
+
+    assert app.state.runtime.settings.comment_monitor_enabled is True
+    assert app.state.monitor_runtime.settings.comment_monitor_enabled is True

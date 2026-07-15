@@ -3,6 +3,27 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 
+def build_scheduler(runtime, settings) -> AsyncIOScheduler:
+    scheduler = AsyncIOScheduler(timezone=settings.timezone)
+    scheduler.add_job(
+        runtime.run_cycle,
+        IntervalTrigger(seconds=settings.poll_seconds),
+        id="comment-monitor",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        runtime.discover_contents,
+        IntervalTrigger(minutes=10),
+        id="content-discovery",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    return scheduler
+
+
 def register_jobs(
     scheduler: AsyncIOScheduler,
     *,
