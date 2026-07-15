@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from cyber_catgirl.agent.service import AgentGenerationError
 from cyber_catgirl.models import DraftRecord, EventRecord, PublishJobRecord
-from cyber_catgirl.schemas import ActionType, InteractionEvent
+from cyber_catgirl.schemas import ActionType, AgentDecision, InteractionEvent
 from cyber_catgirl.services.memory import MemoryService
 from cyber_catgirl.services.safety import SafetyCounters, SafetyEngine
 
@@ -69,6 +69,12 @@ class ReplyService:
         try:
             decision = await self.agent.decide(event, context)
         except AgentGenerationError as exc:
+            if exc.code == "persona_validation_failed" and exc.candidate is not None:
+                return self._store_invalid_persona_draft(
+                    event_id,
+                    exc.candidate,
+                    exc.reasons,
+                )
             self._mark_generation_failure(event_id, exc.code)
             raise ReplyGenerationError(exc.code) from exc
 
@@ -106,6 +112,7 @@ class ReplyService:
                 review_status=(
                     "auto_approved" if verdict.allow_auto_publish else "pending"
                 ),
+                agent_version="catgirl-v2",
                 safety_reasons_json=json.dumps(verdict.reasons, ensure_ascii=False),
                 updated_at=now,
             )
@@ -136,6 +143,49 @@ class ReplyService:
             decision.memory_updates,
         )
         return draft
+
+    def _store_invalid_persona_draft(
+        self,
+        event_id: str,
+        candidate: AgentDecision,
+        reasons: tuple[str, ...],
+    ) -> DraftRecord:
+        now = self.now_provider()
+        with self.session_factory.begin() as session:
+            event = session.scalar(
+                select(EventRecord).where(EventRecord.event_id == event_id)
+            )
+            if event is None:
+                raise LookupError(f"event disappeared: {event_id}")
+            existing = session.scalar(
+                select(DraftRecord).where(
+                    DraftRecord.event_id == event.id,
+                    DraftRecord.draft_type == "reply",
+                )
+            )
+            if existing is not None:
+                return existing
+            draft = DraftRecord(
+                event_id=event.id,
+                draft_type="reply",
+                content=candidate.content,
+                risk_level=candidate.risk_level.value,
+                review_status="validation_failed",
+                agent_version="catgirl-v2",
+                safety_reasons_json=json.dumps(reasons, ensure_ascii=False),
+                updated_at=now,
+            )
+            session.add(draft)
+            session.flush()
+            draft_id = draft.id
+            event.status = "drafted"
+            event.last_error_code = "persona_validation_failed"
+            event.next_attempt_at = None
+        with self.session_factory() as session:
+            stored = session.get(DraftRecord, draft_id)
+            if stored is None:
+                raise LookupError(f"persona draft disappeared: {event_id}")
+            return stored
 
     def _mark_ignored(self, event_id: str) -> None:
         with self.session_factory.begin() as session:

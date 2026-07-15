@@ -46,6 +46,25 @@ class FailingAgent:
         raise AgentGenerationError("deepseek_timeout")
 
 
+class PersonaFailingAgent:
+    async def decide(self, event, context):
+        candidate = AgentDecision(
+            action="reply",
+            content="小伙伴你好",
+            risk_level="low",
+            reason="问候",
+            requires_human_review=True,
+            scene="greeting",
+            address="partner",
+            emoticon="",
+        )
+        raise AgentGenerationError(
+            "persona_validation_failed",
+            reasons=("persona_missing_miao",),
+            candidate=candidate,
+        )
+
+
 NOW = datetime(2026, 7, 15, 8, 0, tzinfo=timezone.utc)
 
 
@@ -164,3 +183,26 @@ async def test_model_failure_becomes_terminal_after_retry_budget():
         event = session.scalar(select(EventRecord))
     assert event.status == "generation_exhausted"
     assert event.next_attempt_at is None
+
+
+async def test_persona_failure_creates_manual_validation_draft_without_job():
+    sessions = create_session_factory("sqlite+pysqlite:///:memory:")
+    seed_event(sessions)
+    service = ReplyService(
+        sessions,
+        PersonaFailingAgent(),
+        MemoryService(sessions),
+        SafetyEngine(run_mode=RunMode.MANUAL_ONLY),
+        now_provider=lambda: NOW,
+    )
+
+    draft = await service.process_event("comment_1")
+
+    with sessions() as session:
+        jobs = session.scalars(select(PublishJobRecord)).all()
+        event = session.scalar(select(EventRecord))
+    assert draft.review_status == "validation_failed"
+    assert draft.agent_version == "catgirl-v2"
+    assert "persona_missing_miao" in draft.safety_reasons_json
+    assert jobs == []
+    assert event.status == "drafted"
