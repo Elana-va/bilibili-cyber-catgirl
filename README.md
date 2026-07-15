@@ -43,7 +43,7 @@ python -m pytest -q
 python -m ruff check src tests
 ```
 
-配置直接读取进程环境变量，`.env.example` 只是变量清单，不会被应用自动加载。默认配置为：
+运行策略直接读取进程环境变量，`.env.example` 只是变量清单，不会被应用自动加载。默认配置为：
 
 - `CATGIRL_RUN_MODE=manual_only`
 - `CATGIRL_KILL_SWITCH=false`
@@ -51,6 +51,10 @@ python -m ruff check src tests
 - SQLite 数据库位于 `data/cyber_catgirl.db`
 
 不要把真实 Cookie 或 API 密钥写入仓库、聊天记录或命令历史。
+
+B站账号推荐从管理台 `/settings` 使用手机 App 扫码连接。会话由 Windows DPAPI 在
+`data/secrets/bilibili-credential.bin` 加密保存，只能由当前 Windows 用户解密；环境变量
+仍作为旧部署的只读后备来源。管理台永远不会显示或导出 Cookie。
 
 ## 启动控制台
 
@@ -68,14 +72,24 @@ python -m uvicorn cyber_catgirl.main:app --host 127.0.0.1 --port 8765
 - `/content`：安排定时草稿生成，不直接发布；
 - `/analytics`：读取 SQLite 的 7/14 天互动趋势；
 - `/logs`：查看发布任务与脱敏审计记录；
-- `/settings`：管理运行模式、白名单和轮询间隔。
+- `/settings`：扫码连接 B站、管理运行模式、白名单和轮询间隔。
 
 桌面端使用左侧导航，手机端自动切换为底部导航。右上角“紧急停止”在所有页面可用；
 开启后会取消待发布任务。后台本身不会启动真实 B站常驻轮询工作进程。
 
 当前 v1 是研究与试运营基线：控制台、领域服务和调度注册器已经完成，但真实账号的常驻轮询
-进程没有默认启动。接入专用测试账号前，先按 `docs/operations.md` 完成凭证、备份、单次写入
-探针与人工值守检查。
+进程没有默认启动。扫码登录只建立认证和只读身份验证，不会自动回复或发布。
+
+## 扫码连接 B站
+
+1. 打开 `http://127.0.0.1:8765/settings`；
+2. 点击“扫码连接 B站”；
+3. 使用已登录目标账号的哔哩哔哩 App 扫码并在手机端确认；
+4. 核对页面显示的昵称和 UID；
+5. 首次连接只运行下方的只读探针，不执行回复或动态发布。
+
+点击“断开连接”会清除本机 DPAPI 密文。如果连接来自旧环境变量，网页不会尝试修改进程环境，
+必须停止服务后移除变量。如怀疑会话泄露，还应在 B站安全中心撤销对应会话。
 
 ## 只读连接测试
 

@@ -77,15 +77,28 @@ Copy-Item -LiteralPath .\data\cyber_catgirl.db `
 
 ## 凭证设置与轮换
 
-B站凭证变量为 `BILI_SESSDATA`、`BILI_JCT`、`BILI_BUVID3`，模型变量为
-`DEEPSEEK_API_KEY`。只在本机受控进程环境或操作系统秘密管理工具中设置。不要把值写入
-`.env.example`、Git、SQLite、截图或工单。
+B站首选在本机管理台 `/settings` 使用手机 App 扫码连接。扫码产生的会话由 Windows DPAPI
+以当前用户作用域加密保存到 `data/secrets/bilibili-credential.bin`。环境变量
+`BILI_SESSDATA`、`BILI_JCT`、`BILI_BUVID3` 仅作为旧部署后备；模型变量为
+`DEEPSEEK_API_KEY`。不要把任何真实值写入 `.env.example`、Git、SQLite、截图或工单。
+
+首次连接步骤：
+
+1. 确认服务只监听 `127.0.0.1`，运行模式为 `manual_only`；
+2. 打开 `/settings` 并点击“扫码连接 B站”；
+3. 用手机哔哩哔哩 App 扫码并确认；
+4. 核对昵称、UID 和“只读验证通过”；
+5. 重启服务，确认同一 Windows 用户仍能完成身份验证；
+6. 运行评论只读探针，不执行真实回复或动态发布。
+
+断开时点击“断开连接”并确认密文已删除。环境变量管理的旧连接必须停止服务后从启动环境移除。
+如怀疑泄露，同时到 B站安全中心撤销会话。
 
 轮换步骤：
 
 1. 打开 kill switch 并停止服务；
-2. 在 B站侧撤销旧会话，生成测试账号的新会话；
-3. 更新本机秘密存储；
+2. 在 B站侧撤销旧会话；
+3. 删除本机密文并重新扫码；
 4. 只运行健康检查和只读探针；
 5. 如需验证写入，重新走专用目标、一次授权、写后核验流程；
 6. 确认审计记录中没有凭证字符串后再恢复人工模式。
