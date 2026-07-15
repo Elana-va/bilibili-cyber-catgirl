@@ -137,3 +137,24 @@ async def test_model_failure_is_retryable_without_empty_draft():
     assert event.processing_attempts == 1
     assert event.next_attempt_at == (NOW + timedelta(minutes=1)).replace(tzinfo=None)
     assert drafts == []
+
+
+async def test_model_failure_becomes_terminal_after_retry_budget():
+    sessions = create_session_factory("sqlite+pysqlite:///:memory:")
+    seed_event(sessions)
+    service = ReplyService(
+        sessions,
+        FailingAgent(),
+        MemoryService(sessions),
+        SafetyEngine(run_mode=RunMode.MANUAL_ONLY),
+        now_provider=lambda: NOW,
+    )
+
+    for _ in range(4):
+        with pytest.raises(ReplyGenerationError):
+            await service.process_event("comment_1")
+
+    with sessions() as session:
+        event = session.scalar(select(EventRecord))
+    assert event.status == "generation_exhausted"
+    assert event.next_attempt_at is None

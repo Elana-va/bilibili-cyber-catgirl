@@ -68,10 +68,12 @@ class MonitorRuntime:
             due_job_ids = []
             if not self.settings.kill_switch:
                 due_job_ids = self._due_publish_job_ids(now, limit=5)
-            published = await asyncio.gather(
-                *(self.publisher.execute(job_id, now=now) for job_id in due_job_ids),
-                return_exceptions=True,
-            )
+            published = []
+            for job_id in due_job_ids:
+                try:
+                    published.append(await self.publisher.execute(job_id, now=now))
+                except Exception as exc:
+                    published.append(exc)
             return MonitorCycleResult(
                 enabled=True,
                 pages_read=poll.pages_read,
@@ -86,10 +88,12 @@ class MonitorRuntime:
                 ),
             )
 
-    async def discover_contents(self, now: datetime | None = None):
+    async def discover_contents(
+        self, now: datetime | None = None, force: bool = False
+    ):
         if self.content_discovery is None:
             return None
-        if not self.settings.comment_monitor_enabled:
+        if not force and not self.settings.comment_monitor_enabled:
             return None
         self.prepare()
         return await self.content_discovery.run_once(
@@ -103,6 +107,7 @@ class MonitorRuntime:
 
         async def execute_manual() -> None:
             try:
+                await self.discover_contents(force=True)
                 await self.run_cycle(force=True)
             finally:
                 self._manual_pending = False

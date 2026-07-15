@@ -59,4 +59,3 @@ def _normalize(key: str, value: str):
     if key == "auto_reply_allowlist":
         return {item.strip() for item in value.split(",") if item.strip()}
     return value
-

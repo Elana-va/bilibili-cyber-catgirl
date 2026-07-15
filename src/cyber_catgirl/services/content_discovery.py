@@ -87,6 +87,14 @@ class ContentDiscoveryService:
         skipped_old = 0
 
         with self.session_factory.begin() as session:
+            expired = session.scalars(
+                select(MonitoredContentRecord).where(
+                    MonitoredContentRecord.active.is_(True),
+                    MonitoredContentRecord.published_at < cutoff,
+                )
+            ).all()
+            for row in expired:
+                row.active = False
             for target in targets:
                 if target.published_at < cutoff:
                     skipped_old += 1
@@ -102,6 +110,7 @@ class ContentDiscoveryService:
                     inserted += 1
                 else:
                     self._update_record(row, target, now)
+                    row.active = True
                     updated += 1
             self.checkpoints.set_in_session(
                 session,

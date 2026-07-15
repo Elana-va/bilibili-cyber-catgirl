@@ -109,6 +109,34 @@ async def test_discovery_resumes_from_saved_cursor():
     assert connector.seen_cursor == "dynamic:resume"
 
 
+async def test_discovery_deactivates_targets_outside_backfill_window():
+    sessions = create_session_factory("sqlite+pysqlite:///:memory:")
+    with sessions.begin() as session:
+        session.add(
+            MonitoredContentRecord(
+                platform_content_id="video:old",
+                display_type="video",
+                comment_oid="99",
+                resource_type="video",
+                title="旧视频",
+                published_at=NOW - timedelta(days=31),
+                active=True,
+            )
+        )
+    service = ContentDiscoveryService(
+        sessions,
+        FakeDiscoveryPort([], next_cursor=None),
+        account_id="1801157579",
+        backfill_days=30,
+    )
+
+    await service.run_once(NOW)
+
+    with sessions() as session:
+        row = session.scalar(select(MonitoredContentRecord))
+    assert row.active is False
+
+
 async def test_discovery_failure_does_not_advance_checkpoint():
     sessions = create_session_factory("sqlite+pysqlite:///:memory:")
 

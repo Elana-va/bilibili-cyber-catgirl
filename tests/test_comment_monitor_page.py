@@ -81,4 +81,3 @@ def test_review_card_shows_source_comment_and_priority():
     assert "测试视频" in response.text
     assert "优先" in response.text
     assert "B站真实写入未授权" in response.text
-

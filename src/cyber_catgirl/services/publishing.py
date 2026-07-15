@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import select
+
+from cyber_catgirl.config import RunMode
 from cyber_catgirl.connectors.base import BilibiliPort
 from cyber_catgirl.connectors.bilibili_api import (
     CredentialsUnavailable,
@@ -28,10 +31,99 @@ class PublishResult:
     platform_id: str | None
 
 
+@dataclass(frozen=True)
+class AutoGateDecision:
+    allowed: bool
+    status: str = "cancelled"
+    error_code: str | None = None
+    next_attempt_at: datetime | None = None
+
+
+class AutoPublishGuard:
+    def __init__(self, session_factory, settings) -> None:
+        self.session_factory = session_factory
+        self.settings = settings
+
+    def evaluate(self, job_id: int, now: datetime) -> AutoGateDecision:
+        with self.session_factory() as session:
+            job = session.get(PublishJobRecord, job_id)
+            if job is None or job.source != "auto":
+                return AutoGateDecision(True)
+            draft = session.get(DraftRecord, job.draft_id)
+            event_row = session.get(EventRecord, draft.event_id) if draft else None
+            if draft is None or event_row is None:
+                return AutoGateDecision(False, error_code="auto_source_missing")
+            if (
+                self.settings.kill_switch
+                or self.settings.run_mode is not RunMode.LIMITED_AUTO
+                or not self.settings.comment_auto_reply_enabled
+                or not self.settings.bilibili_write_enabled
+            ):
+                return AutoGateDecision(False, error_code="auto_gate_closed")
+            if draft.review_status != "auto_approved" or draft.risk_level != "low":
+                return AutoGateDecision(False, error_code="auto_draft_not_eligible")
+            event = InteractionEvent.model_validate_json(event_row.payload_json)
+            succeeded = session.execute(
+                select(PublishJobRecord, EventRecord)
+                .join(DraftRecord, PublishJobRecord.draft_id == DraftRecord.id)
+                .join(EventRecord, DraftRecord.event_id == EventRecord.id)
+                .where(PublishJobRecord.source == "auto")
+                .where(PublishJobRecord.status == "succeeded")
+            ).all()
+
+        start_hour = now.replace(minute=0, second=0, microsecond=0)
+        start_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        account_hour = account_day = user_day = 0
+        latest: datetime | None = None
+        for prior_job, prior_event_row in succeeded:
+            completed = _as_utc(prior_job.completed_at or prior_job.created_at)
+            if completed >= start_hour:
+                account_hour += 1
+            if completed >= start_day:
+                account_day += 1
+                prior_event = InteractionEvent.model_validate_json(
+                    prior_event_row.payload_json
+                )
+                if prior_event.actor_id == event.actor_id:
+                    user_day += 1
+            if latest is None or completed > latest:
+                latest = completed
+
+        retry_candidates: list[datetime] = []
+        if latest is not None:
+            earliest = latest + timedelta(
+                seconds=self.settings.auto_reply_min_delay_seconds
+            )
+            if earliest > now:
+                retry_candidates.append(earliest)
+        if account_hour >= self.settings.auto_reply_account_hourly_limit:
+            retry_candidates.append(start_hour + timedelta(hours=1))
+        if (
+            account_day >= self.settings.auto_reply_account_daily_limit
+            or user_day >= self.settings.auto_reply_user_daily_limit
+        ):
+            retry_candidates.append(start_day + timedelta(days=1))
+        if retry_candidates:
+            return AutoGateDecision(
+                False,
+                status="retry_wait",
+                error_code="auto_rate_limited",
+                next_attempt_at=max(retry_candidates),
+            )
+        return AutoGateDecision(True)
+
+
 class Publisher:
-    def __init__(self, session_factory, connector: BilibiliPort) -> None:
+    def __init__(
+        self,
+        session_factory,
+        connector: BilibiliPort,
+        *,
+        auto_guard: AutoPublishGuard | None = None,
+    ) -> None:
         self.session_factory = session_factory
         self.connector = connector
+        self.auto_guard = auto_guard
 
     async def execute(
         self, job_id: int, now: datetime | None = None
@@ -52,6 +144,16 @@ class Publisher:
                 job.next_attempt_at = None
                 session.commit()
                 return PublishResult(job.id, job.status, job.platform_id)
+            if job.source == "auto" and self.auto_guard is not None:
+                gate = self.auto_guard.evaluate(job.id, now)
+                if not gate.allowed:
+                    job.status = gate.status
+                    job.last_error_code = gate.error_code
+                    job.next_attempt_at = gate.next_attempt_at
+                    if gate.status == "cancelled":
+                        job.completed_at = now
+                    session.commit()
+                    return PublishResult(job.id, job.status, job.platform_id)
             draft = session.get(DraftRecord, job.draft_id)
             if draft is None or draft.event_id is None:
                 raise LookupError("reply draft or source event is missing")
@@ -81,7 +183,10 @@ class Publisher:
                 session.commit()
 
             visible = await self.connector.verify_publication(
-                platform_id, event.target_id, event.target_type
+                platform_id,
+                event.target_id,
+                event.target_type,
+                event.root_comment_id,
             )
             final_status = "succeeded" if visible else "visibility_unknown"
             error_code = None

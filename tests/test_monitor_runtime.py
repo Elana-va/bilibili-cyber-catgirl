@@ -43,6 +43,15 @@ class RecordingPublisher:
         return object()
 
 
+class RecordingDiscovery:
+    def __init__(self):
+        self.calls = 0
+
+    async def run_once(self, now):
+        self.calls += 1
+        return object()
+
+
 @dataclass
 class RuntimeFixture:
     runtime: MonitorRuntime
@@ -119,3 +128,14 @@ async def test_disabled_cycle_performs_no_work_unless_forced():
     assert fixture.replies.event_ids == []
     assert fixture.publisher.executed_job_ids == []
 
+
+async def test_manual_sync_discovers_content_before_polling():
+    fixture = make_runtime()
+    discovery = RecordingDiscovery()
+    fixture.runtime.content_discovery = discovery
+
+    assert fixture.runtime.request_manual_cycle() is True
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+
+    assert discovery.calls == 1

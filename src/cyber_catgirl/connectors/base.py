@@ -47,4 +47,5 @@ class BilibiliPort(Protocol):
         platform_id: str,
         comment_oid: str | None = None,
         resource_type: str | None = None,
+        root_comment_id: str | None = None,
     ) -> bool: ...

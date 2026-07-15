@@ -159,3 +159,13 @@ async def test_writer_passes_root_and_parent_to_sdk():
         "parent": 101,
     }
     assert platform_id == "comment:202"
+
+
+async def test_nested_publication_verification_reads_subcomments():
+    connector = BilibiliApiConnector(credential=object(), sdk=DiscoverySdk())
+
+    visible = await connector.verify_publication(
+        "comment:102", "42", "video", root_comment_id="100"
+    )
+
+    assert visible is True

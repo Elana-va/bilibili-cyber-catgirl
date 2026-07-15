@@ -67,12 +67,14 @@ class CommentMonitorService:
         account_id: str,
         account_name: str,
         backfill_limit: int = 500,
+        on_pause=None,
     ) -> None:
         self.session_factory = session_factory
         self.connector = connector
         self.account_id = account_id
         self.account_name = account_name
         self.backfill_limit = backfill_limit
+        self.on_pause = on_pause or (lambda error_code: None)
         self.checkpoints = CheckpointStore(session_factory)
 
     async def poll_once(
@@ -320,6 +322,7 @@ class CommentMonitorService:
         with self.session_factory.begin() as session:
             self._set_setting(session, "comment_monitor_enabled", "false")
             self._set_setting(session, "comment_monitor_error_code", error_code)
+        self.on_pause(error_code)
 
     def _load_backfill_state(self) -> BackfillState:
         with self.session_factory() as session:

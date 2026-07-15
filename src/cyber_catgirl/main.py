@@ -133,7 +133,7 @@ def _build_default_monitor_runtime(
     from cyber_catgirl.services.content_discovery import ContentDiscoveryService
     from cyber_catgirl.services.memory import MemoryService
     from cyber_catgirl.services.monitor_runtime import MonitorRuntime
-    from cyber_catgirl.services.publishing import Publisher
+    from cyber_catgirl.services.publishing import AutoPublishGuard, Publisher
     from cyber_catgirl.services.replies import ReplyService
     from cyber_catgirl.services.safety import SafetyEngine
 
@@ -192,6 +192,9 @@ def _build_default_monitor_runtime(
         account_id=account_id,
         account_name="赛博猫娘",
         backfill_limit=settings.comment_backfill_limit,
+        on_pause=lambda error_code: setattr(
+            settings, "comment_monitor_enabled", False
+        ),
     )
     def refresh_bilibili_credential() -> None:
         try:
@@ -219,7 +222,11 @@ def _build_default_monitor_runtime(
         settings,
         monitor,
         reply_service,
-        Publisher(session_factory, connector),
+        Publisher(
+            session_factory,
+            connector,
+            auto_guard=AutoPublishGuard(session_factory, settings),
+        ),
         content_discovery=discovery,
         prepare=refresh_bilibili_credential,
     )

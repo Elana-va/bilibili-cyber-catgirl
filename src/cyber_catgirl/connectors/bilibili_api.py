@@ -305,12 +305,31 @@ class BilibiliApiConnector:
         platform_id: str,
         comment_oid: str | None = None,
         resource_type: str | None = None,
+        root_comment_id: str | None = None,
     ) -> bool:
         kind, raw_id = platform_id.split(":", maxsplit=1)
         if kind == "comment":
             oid = comment_oid or (str(self.oid) if self.oid is not None else None)
             type_name = resource_type or self.resource_type
             if oid is None or type_name is None:
+                return False
+            if root_comment_id:
+                for page in range(1, 4):
+                    payload = await self.sdk.get_sub_comments(
+                        int(oid),
+                        type_name,
+                        int(root_comment_id),
+                        page,
+                        self.credential,
+                    )
+                    replies = self._extract_replies(payload)
+                    if any(str(reply.get("rpid")) == raw_id for reply in replies):
+                        return True
+                    page_info = payload.get("page") or {}
+                    page_size = int(page_info.get("size") or 20)
+                    total = int(page_info.get("count") or len(replies))
+                    if not replies or page * page_size >= total:
+                        break
                 return False
             payload = await self.sdk.get_comments(int(oid), type_name, 1, self.credential)
             return any(

@@ -4,7 +4,10 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 
 from cyber_catgirl.connectors.base import CommentPage
-from cyber_catgirl.connectors.bilibili_api import PlatformRateLimited
+from cyber_catgirl.connectors.bilibili_api import (
+    CredentialsUnavailable,
+    PlatformRateLimited,
+)
 from cyber_catgirl.db import create_session_factory
 from cyber_catgirl.models import (
     EventRecord,
@@ -129,6 +132,26 @@ async def test_poll_stores_top_level_and_nested_events_without_self_replies():
         load_event(sessions, "comment_202").payload_json
     )
     assert (nested.root_comment_id, nested.parent_comment_id) == ("201", "201")
+
+
+async def test_credential_failure_pauses_persisted_and_in_memory_monitor():
+    sessions = make_sessions()
+    connector = MonitorConnector()
+    connector.error = CredentialsUnavailable("expired")
+    pauses = []
+    service = CommentMonitorService(
+        sessions,
+        connector,
+        account_id="1801157579",
+        account_name="赛博猫娘",
+        on_pause=pauses.append,
+    )
+
+    result = await service.poll_once(NOW)
+
+    assert result.error_code == "bilibili_credentials_missing"
+    assert setting(sessions, "comment_monitor_enabled") == "false"
+    assert pauses == ["bilibili_credentials_missing"]
 
 
 async def test_polling_same_comments_twice_does_not_duplicate_events():

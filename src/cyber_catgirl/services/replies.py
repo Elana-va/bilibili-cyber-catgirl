@@ -162,6 +162,7 @@ class ReplyService:
             if event.processing_attempts <= len(GENERATION_BACKOFF):
                 event.next_attempt_at = now + GENERATION_BACKOFF[event.processing_attempts - 1]
             else:
+                event.status = "generation_exhausted"
                 event.next_attempt_at = None
 
     def _safety_counters(self, actor_id: str, now: datetime) -> SafetyCounters:

@@ -133,4 +133,3 @@ def test_disabled_auto_reply_settings_are_persisted_and_audited():
             select(AuditLogRecord).order_by(AuditLogRecord.id.desc())
         )
     assert json.loads(audit.details_json)["enabled"] is False
-
