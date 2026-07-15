@@ -4,26 +4,78 @@ import httpx
 from pydantic import ValidationError
 
 from cyber_catgirl.agent.client import LLMPort
-from cyber_catgirl.agent.prompts import CATGIRL_SYSTEM_PROMPT
-from cyber_catgirl.schemas import AgentDecision, InteractionEvent
+from cyber_catgirl.agent.persona import route_scene
+from cyber_catgirl.agent.persona_validation import PersonaValidator, RecentStyleHistory
+from cyber_catgirl.agent.prompts import build_persona_system_prompt
+from cyber_catgirl.schemas import ActionType, AgentDecision, InteractionEvent
 from cyber_catgirl.services.memory import MemoryContext
 
 
 class AgentGenerationError(RuntimeError):
-    def __init__(self, code: str):
+    def __init__(
+        self,
+        code: str,
+        *,
+        reasons: tuple[str, ...] = (),
+        candidate: AgentDecision | None = None,
+    ) -> None:
         super().__init__(code)
         self.code = code
+        self.reasons = reasons
+        self.candidate = candidate
 
 
 class CatgirlAgent:
-    def __init__(self, llm: LLMPort) -> None:
+    def __init__(self, llm: LLMPort, style_history=None, validator=None) -> None:
         self.llm = llm
+        self.style_history = style_history
+        self.validator = validator or PersonaValidator()
 
     async def decide(
         self, event: InteractionEvent, context: MemoryContext
     ) -> AgentDecision:
+        scene = route_scene(event.content)
+        history = (
+            self.style_history.for_draft_type("reply")
+            if self.style_history is not None
+            else RecentStyleHistory.empty()
+        )
+        reasons: tuple[str, ...] = ()
+        candidate: AgentDecision | None = None
+        for _ in range(2):
+            prompt = build_persona_system_prompt(
+                task="reply",
+                scene=scene,
+                history_hint=history.prompt_hint(),
+                correction_reasons=reasons,
+            )
+            candidate = await self._generate(prompt, event, context)
+            if candidate.action is not ActionType.REPLY:
+                return candidate
+            result = self.validator.validate_reply(
+                candidate,
+                expected_scene=scene,
+                history=history,
+            )
+            if result.passed:
+                return candidate
+            reasons = result.reasons
+            if result.hard_block:
+                break
+        raise AgentGenerationError(
+            "persona_validation_failed",
+            reasons=reasons,
+            candidate=candidate,
+        )
+
+    async def _generate(
+        self,
+        prompt: str,
+        event: InteractionEvent,
+        context: MemoryContext,
+    ) -> AgentDecision:
         messages = [
-            {"role": "system", "content": CATGIRL_SYSTEM_PROMPT},
+            {"role": "system", "content": prompt},
             {
                 "role": "user",
                 "content": json.dumps(
