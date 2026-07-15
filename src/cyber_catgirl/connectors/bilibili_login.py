@@ -3,9 +3,11 @@ from __future__ import annotations
 import base64
 import math
 import secrets
+import tempfile
 import time
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Callable, Protocol
 
 from bilibili_api.login_v2 import QrCodeLogin, QrCodeLoginEvents
@@ -55,7 +57,10 @@ class BilibiliQrSdkAdapter:
 
     async def generate(self) -> bytes:
         await self.login.generate_qrcode()
-        return self.login.get_qrcode_picture().content
+        try:
+            return self.login.get_qrcode_picture().content
+        finally:
+            Path(tempfile.gettempdir(), "qrcode.png").unlink(missing_ok=True)
 
     async def check(self) -> LoginPhase:
         event = await self.login.check_state()

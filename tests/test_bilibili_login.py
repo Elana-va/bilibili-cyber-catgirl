@@ -1,4 +1,6 @@
 from collections import deque
+from pathlib import Path
+import tempfile
 
 import pytest
 
@@ -73,6 +75,12 @@ class FakeSdkLogin:
         return FakeCredential()
 
 
+class TempWritingSdkLogin(FakeSdkLogin):
+    async def generate_qrcode(self):
+        await super().generate_qrcode()
+        Path(tempfile.gettempdir(), "qrcode.png").write_bytes(b"sdk-temporary-qr")
+
+
 @pytest.mark.asyncio
 async def test_sdk_adapter_maps_qr_and_allowed_credential_fields():
     login = FakeSdkLogin()
@@ -87,6 +95,16 @@ async def test_sdk_adapter_maps_qr_and_allowed_credential_fields():
         ac_time_value="sdk-refresh",
         buvid3="sdk-buvid",
     )
+
+
+@pytest.mark.asyncio
+async def test_sdk_adapter_removes_temporary_qr_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    adapter = BilibiliQrSdkAdapter(TempWritingSdkLogin())
+
+    await adapter.generate()
+
+    assert not (tmp_path / "qrcode.png").exists()
 
 
 @pytest.mark.asyncio

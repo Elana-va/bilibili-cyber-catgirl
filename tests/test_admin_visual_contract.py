@@ -55,6 +55,7 @@ def test_styles_include_mobile_and_reduced_motion_contracts():
     assert "@media (max-width: 720px)" in css
     assert "prefers-reduced-motion: reduce" in css
     assert ":focus-visible" in css
+    assert "[hidden]{display:none!important}" in css
 
 
 def test_settings_contains_accessible_bilibili_login_dialog():

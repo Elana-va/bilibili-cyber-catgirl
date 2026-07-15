@@ -41,7 +41,7 @@
       <header class="panel-heading">
         <div><p class="eyebrow">CONNECTIONS</p><h2>连接状态</h2></div>
         <span class="state-badge state-{{ 'active' if bilibili_configured else 'disabled' }}" data-bilibili-status>
-          {{ "待验证" if bilibili_configured else "未连接" }}
+          {{ "已配置 · 待验证" if bilibili_configured else "未连接" }}
         </span>
       </header>
 
