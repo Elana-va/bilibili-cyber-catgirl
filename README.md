@@ -6,6 +6,8 @@
 ## 当前能力
 
 - 公共评论只读采集、事件标准化与去重；
+- 主账号近 30 天视频与动态发现、顶级评论和楼中楼增量监控；
+- 最多 500 条历史评论分批回溯、持久化游标和重启恢复；
 - DeepSeek 兼容接口的结构化猫娘回复决策；
 - 分用户记忆、敏感记忆拒绝和提示注入拦截；
 - 白名单、频率、风险等级、人工审核和 kill switch；
@@ -48,6 +50,9 @@ python -m ruff check src tests
 - `CATGIRL_RUN_MODE=manual_only`
 - `CATGIRL_KILL_SWITCH=false`
 - `CATGIRL_AUTO_REPLY_ALLOWLIST=`（空白名单）
+- `CATGIRL_COMMENT_MONITOR_ENABLED=false`
+- `CATGIRL_COMMENT_AUTO_REPLY_ENABLED=false`
+- `CATGIRL_BILIBILI_WRITE_ENABLED=false`
 - SQLite 数据库位于 `data/cyber_catgirl.db`
 
 不要把真实 Cookie 或 API 密钥写入仓库、聊天记录或命令历史。
@@ -75,9 +80,10 @@ python -m uvicorn cyber_catgirl.main:app --host 127.0.0.1 --port 8765
 浏览器打开 `http://127.0.0.1:8765`，健康检查为
 `http://127.0.0.1:8765/api/health`。服务只绑定本机地址，首次启动保持全人工模式。
 
-管理后台包含六个页面：
+管理后台包含七个页面：
 
 - `/`：工作台与真实数据概览；
+- `/comment-monitor`：启停评论监控、立即同步、查看历史回溯和发送保护；
 - `/reviews`：逐条审核、编辑、批准或拒绝草稿；
 - `/content`：安排定时草稿生成，不直接发布；
 - `/analytics`：读取 SQLite 的 7/14 天互动趋势；
@@ -85,10 +91,20 @@ python -m uvicorn cyber_catgirl.main:app --host 127.0.0.1 --port 8765
 - `/settings`：扫码连接 B站、管理运行模式、白名单和轮询间隔。
 
 桌面端使用左侧导航，手机端自动切换为底部导航。右上角“紧急停止”在所有页面可用；
-开启后会取消待发布任务。后台本身不会启动真实 B站常驻轮询工作进程。
+开启后会取消待发布任务。评论监控调度器随应用生命周期启动，但默认开关关闭；只有在评论监控页手动开启后才读取 B站公开内容。
 
-当前 v1 是研究与试运营基线：控制台、领域服务和调度注册器已经完成，但真实账号的常驻轮询
-进程没有默认启动。扫码登录只建立认证和只读身份验证，不会自动回复或发布。
+当前 v1 是研究与试运营基线：扫码登录只建立认证，评论监控需要在管理台单独开启。即使监控开启，只要 `CATGIRL_BILIBILI_WRITE_ENABLED=false`，系统也只生成待审核草稿，不会自动回复或发布。
+
+## 评论监控试运行
+
+1. 启动服务，在 `/settings` 确认 B站与 DeepSeek 均已连接；
+2. 打开 `/comment-monitor`，点击“开启监控”，再点击“立即同步”；
+3. 系统每 60 秒最多读取 3 页，分批回溯最近 30 天、最多 500 条评论；
+4. 在 `/reviews` 核对原评论、作者、来源内容、楼中楼上下文和生成草稿；
+5. 第一代保持真实写入与自动回复关闭。未授权时，批准按钮会明确显示“写入未授权”；
+6. 重启后会从 SQLite 游标恢复，已导入评论和已生成草稿不会重复创建。
+
+平台限流按 5、15、60 分钟退避；风控或登录失效会暂停相关操作并保留游标。真实写入授权前应先备份 `data/cyber_catgirl.db`，再次核对目标主账号，并阅读 `docs/operations.md`。
 
 ## 扫码连接 B站
 

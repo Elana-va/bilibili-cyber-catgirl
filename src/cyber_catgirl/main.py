@@ -127,7 +127,6 @@ def _build_default_monitor_runtime(
 ):
     from bilibili_api import Credential
 
-    from cyber_catgirl.agent.client import DeepSeekClient
     from cyber_catgirl.agent.service import CatgirlAgent
     from cyber_catgirl.connectors.bilibili_api import BilibiliApiConnector
     from cyber_catgirl.services.comment_monitor import CommentMonitorService
@@ -161,20 +160,7 @@ def _build_default_monitor_runtime(
             settings, "comment_monitor_enabled", False
         ),
     )
-    try:
-        deepseek_data = deepseek_store.load()
-    except Exception:
-        deepseek_data = None
-    env_api_key = getenv("DEEPSEEK_API_KEY")
-    if deepseek_data is not None:
-        llm = DeepSeekClient(deepseek_data.api_key, model=deepseek_data.model)
-    elif env_api_key:
-        llm = DeepSeekClient(
-            env_api_key,
-            model=getenv("DEEPSEEK_MODEL", DEFAULT_MODEL),
-        )
-    else:
-        llm = _UnconfiguredLlm()
+    llm = _CredentialBackedLlm(deepseek_store)
 
     reply_service = ReplyService(
         session_factory,
@@ -207,6 +193,27 @@ def _build_default_monitor_runtime(
         account_name="赛博猫娘",
         backfill_limit=settings.comment_backfill_limit,
     )
+    def refresh_bilibili_credential() -> None:
+        try:
+            latest = credential_store.load()
+        except Exception:
+            latest = None
+        if latest is None:
+            connector.credential = None
+            discovery.account_id = "0"
+            monitor.account_id = "0"
+            return
+        connector.credential = Credential(
+            sessdata=latest.sessdata,
+            bili_jct=latest.bili_jct,
+            dedeuserid=latest.dedeuserid,
+            ac_time_value=latest.ac_time_value,
+            buvid3=latest.buvid3,
+        )
+        current_account_id = latest.dedeuserid or "0"
+        discovery.account_id = current_account_id
+        monitor.account_id = current_account_id
+
     return MonitorRuntime(
         session_factory,
         settings,
@@ -214,12 +221,37 @@ def _build_default_monitor_runtime(
         reply_service,
         Publisher(session_factory, connector),
         content_discovery=discovery,
+        prepare=refresh_bilibili_credential,
     )
 
 
-class _UnconfiguredLlm:
+class _CredentialBackedLlm:
+    def __init__(self, store) -> None:
+        self.store = store
+
     async def generate_json(self, messages: list[dict], schema: dict) -> dict:
-        raise RuntimeError("deepseek_not_configured")
+        from cyber_catgirl.agent.client import DeepSeekClient
+
+        try:
+            credential = self.store.load()
+        except Exception:
+            credential = None
+        if credential is not None:
+            client = DeepSeekClient(
+                credential.api_key,
+                base_url=getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+                model=credential.model,
+            )
+            return await client.generate_json(messages, schema)
+        api_key = getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            raise RuntimeError("deepseek_not_configured")
+        client = DeepSeekClient(
+            api_key,
+            base_url=getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+            model=getenv("DEEPSEEK_MODEL", DEFAULT_MODEL),
+        )
+        return await client.generate_json(messages, schema)
 
 
 app = create_app()

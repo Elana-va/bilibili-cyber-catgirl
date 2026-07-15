@@ -31,6 +31,7 @@ class MonitorRuntime:
         reply_service,
         publisher,
         content_discovery=None,
+        prepare=None,
     ) -> None:
         self.session_factory = session_factory
         self.settings = settings
@@ -38,6 +39,7 @@ class MonitorRuntime:
         self.reply_service = reply_service
         self.publisher = publisher
         self.content_discovery = content_discovery
+        self.prepare = prepare or (lambda: None)
         self._cycle_lock = asyncio.Lock()
         self._manual_pending = False
 
@@ -49,6 +51,7 @@ class MonitorRuntime:
             return MonitorCycleResult.disabled()
 
         async with self._cycle_lock:
+            self.prepare()
             poll = await self.comment_monitor.poll_once(now, page_budget=3)
             event_ids = self._pending_event_ids(now, limit=20)
             semaphore = asyncio.Semaphore(2)
@@ -88,6 +91,7 @@ class MonitorRuntime:
             return None
         if not self.settings.comment_monitor_enabled:
             return None
+        self.prepare()
         return await self.content_discovery.run_once(
             now or datetime.now(timezone.utc)
         )

@@ -17,6 +17,9 @@
 $env:CATGIRL_RUN_MODE='manual_only'
 $env:CATGIRL_KILL_SWITCH='false'
 $env:CATGIRL_AUTO_REPLY_ALLOWLIST=''
+$env:CATGIRL_COMMENT_MONITOR_ENABLED='false'
+$env:CATGIRL_COMMENT_AUTO_REPLY_ENABLED='false'
+$env:CATGIRL_BILIBILI_WRITE_ENABLED='false'
 python -m uvicorn cyber_catgirl.main:app --host 127.0.0.1 --port 8765
 ```
 
@@ -47,7 +50,30 @@ Invoke-RestMethod -Method Post `
 5. 在运行日志处理 `failed` 和 `visibility_unknown`；后者禁止重发；
 6. 只在系统设置维护非敏感配置。凭证状态仅显示“已配置/未配置”。
 
-管理后台是运营与审核界面，不会自行启动真实 B站轮询或发布工作进程。
+应用调度器会随服务启动和停止，但评论监控默认关闭；只有管理台明确开启后才进行 B站只读轮询。真实发布仍由独立写入闸门控制。
+
+## 评论监控值守流程
+
+1. 在 `/settings` 确认 B站和 DeepSeek 连接状态正常；
+2. 进入 `/comment-monitor`，保持“B站真实写入未授权”，手动开启只读监控；
+3. 首次同步会分批发现近 30 天的视频与动态，并回溯最多 500 条历史评论；
+4. 单周期最多读取 3 页、并发生成 2 条、累计启动不超过 20 条草稿生成任务；
+5. 在 `/reviews` 逐条检查原评论、作者、来源、楼中楼上下文和安全原因；
+6. 重启后检查回溯数字、事件数和草稿数没有重复增长。
+
+默认状态下 `comment_monitor_enabled=false`、`comment_auto_reply_enabled=false`、`bilibili_write_enabled=false`。启动服务本身不会调用模型生成或 B站写入；监控开启但写入关闭时，B站发送调用次数必须为零。
+
+### 监控故障恢复
+
+| 状态 | 系统行为 | 值守动作 |
+|---|---|---|
+| B站限流 / 429 | 按 5、15、60 分钟退避并保留游标 | 不要连续点击同步，等待退避到期 |
+| B站风控 | 暂停监控或取消写入任务 | 开启紧急停止，人工检查账号状态 |
+| 登录失效 | 停止读取和写入，保留事件与草稿 | 在设置页重新扫码并验证 UID |
+| DeepSeek 超时 / 5xx | 按 1、5、15 分钟重试生成 | 检查连接与余额，不创建空草稿 |
+| `visibility_unknown` | 保存平台 ID，不自动重发 | 到 B站页面人工核对 |
+
+准备评估真实写入前，先停止服务并备份数据库；确认主账号、运行模式、频率限制和紧急停止均可用后，才可在单独验收中设置 `CATGIRL_BILIBILI_WRITE_ENABLED=true`。不要把真实 Cookie 或 API Key 写入 `.env.example`、日志、截图或工单。
 
 ## 恢复到人工模式
 
