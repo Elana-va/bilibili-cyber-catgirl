@@ -69,13 +69,40 @@
       </div>
 
       <div class="connection-divider"></div>
-      <div class="connection-list">
-        <div>
+      <section class="deepseek-card" data-deepseek-root>
+        <header class="deepseek-card-heading">
           <span class="connection-icon">AI</span>
-          <span><strong>DeepSeek 模型</strong><small>本机 API 密钥</small></span>
-          <span class="state-badge state-{{ 'active' if llm_configured else 'disabled' }}">{{ "已配置" if llm_configured else "未配置" }}</span>
+          <span><strong>DeepSeek 模型</strong><small>本机 DPAPI 加密密钥</small></span>
+          <span class="state-badge state-{{ 'active' if llm_configured else 'disabled' }}" data-deepseek-status>{{ "待验证" if llm_configured else "未连接" }}</span>
+        </header>
+        <form class="deepseek-connect-form" data-deepseek-form>
+          <label>
+            <span>API Key</span>
+            <input type="password" name="api_key" autocomplete="new-password"
+                   maxlength="512" required data-deepseek-key
+                   placeholder="仅提交给本机与 DeepSeek 官方验证">
+          </label>
+          <label>
+            <span>模型</span>
+            <select name="model" data-deepseek-model>
+              <option value="deepseek-v4-flash">DeepSeek V4 Flash（推荐）</option>
+              <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+            </select>
+          </label>
+          <button class="button button-primary" type="submit" data-deepseek-connect>
+            验证并连接
+          </button>
+        </form>
+        <div class="deepseek-connected" data-deepseek-connected hidden>
+          <span><small>当前模型</small><strong data-deepseek-current-model>—</strong></span>
+          <span><small>最近验证</small><strong data-deepseek-verified-at>—</strong></span>
+          <span class="deepseek-actions">
+            <button class="button button-secondary" type="button" data-deepseek-verify>重新验证</button>
+            <button class="button button-danger-ghost" type="button" data-deepseek-disconnect>断开连接</button>
+          </span>
         </div>
-      </div>
+        <p class="deepseek-note">连接只调用官方模型列表，不发起对话生成，不产生模型回复。</p>
+      </section>
       <div class="privacy-note">
         <strong>凭证隔离</strong>
         <p>B站会话经 Windows DPAPI 加密保存；页面、数据库、日志和模型上下文都拿不到原始值。</p>

@@ -68,6 +68,21 @@ def test_settings_contains_accessible_bilibili_login_dialog():
     assert "/static/bilibili-login.js" in html
 
 
+def test_settings_contains_secure_deepseek_connection_card():
+    html = make_client().get("/settings").text
+
+    assert "data-deepseek-root" in html
+    assert 'type="password"' in html
+    assert 'autocomplete="new-password"' in html
+    assert "data-deepseek-model" in html
+    assert 'value="deepseek-v4-flash"' in html
+    assert 'value="deepseek-v4-pro"' in html
+    assert "data-deepseek-connect" in html
+    assert "data-deepseek-verify" in html
+    assert "data-deepseek-disconnect" in html
+    assert "/static/deepseek-connection.js" in html
+
+
 def test_javascript_files_have_valid_syntax():
     bundled = (
         Path.home()
@@ -77,7 +92,7 @@ def test_javascript_files_have_valid_syntax():
     if node is None:
         pytest.skip("Node.js is unavailable for JavaScript syntax validation")
 
-    for script in ["app.js", "bilibili-login.js"]:
+    for script in ["app.js", "bilibili-login.js", "deepseek-connection.js"]:
         result = subprocess.run(
             [node, "--check", f"src/cyber_catgirl/web/static/{script}"],
             capture_output=True,
