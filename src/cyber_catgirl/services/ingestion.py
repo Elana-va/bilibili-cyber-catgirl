@@ -6,6 +6,16 @@ from cyber_catgirl.connectors.base import BilibiliPort
 from cyber_catgirl.models import EventRecord
 
 
+def store_unique_event(session, row: EventRecord) -> bool:
+    try:
+        with session.begin_nested():
+            session.add(row)
+            session.flush()
+    except IntegrityError:
+        return False
+    return True
+
+
 @dataclass(frozen=True)
 class IngestionResult:
     inserted: int
@@ -25,18 +35,18 @@ class IngestionService:
 
         for event in events:
             with self.session_factory() as session:
-                session.add(
+                was_inserted = store_unique_event(
+                    session,
                     EventRecord(
                         event_id=event.event_id,
                         event_type=event.event_type,
                         payload_json=event.model_dump_json(),
-                    )
+                    ),
                 )
-                try:
-                    session.commit()
+                session.commit()
+                if was_inserted:
                     inserted += 1
-                except IntegrityError:
-                    session.rollback()
+                else:
                     duplicates += 1
 
         return IngestionResult(
