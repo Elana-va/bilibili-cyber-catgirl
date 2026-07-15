@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}评论监控 · 小喵创作室{% endblock %}
+{% block page_title %}评论监控{% endblock %}
+{% block content %}
+  <section class="monitor-hero" data-monitor-state="{{ 'active' if monitor.enabled else 'paused' }}">
+    <div class="monitor-hero-copy">
+      <p class="eyebrow">COMMENT RADAR / BILIBILI</p>
+      <h2>{{ "正在守候新评论" if monitor.enabled else "评论雷达当前暂停" }}</h2>
+      <p>扫描主账号近 30 天的视频与动态，保留楼中楼关系，并把待回复内容送入人工审核。</p>
+      <div class="monitor-actions">
+        <button class="button button-primary" type="button" data-action="sync-comments">立即同步</button>
+        <button class="button button-secondary" type="button" data-action="{{ 'stop-monitor' if monitor.enabled else 'start-monitor' }}">
+          {{ "暂停监控" if monitor.enabled else "开启监控" }}
+        </button>
+      </div>
+    </div>
+    <div class="radar-orbit" aria-hidden="true">
+      <span class="radar-core">喵</span><i></i><i></i><i></i>
+    </div>
+  </section>
+
+  <section class="signal-rail" aria-label="评论处理流程">
+    <div class="signal-node is-live"><span>01</span><strong>发现内容</strong><small>视频与动态</small></div>
+    <div class="signal-node"><span>02</span><strong>读取评论</strong><small>包含楼中楼</small></div>
+    <div class="signal-node"><span>03</span><strong>生成草稿</strong><small>DeepSeek 驱动</small></div>
+    <div class="signal-node"><span>04</span><strong>人工审核</strong><small>真实写入受控</small></div>
+  </section>
+
+  <div class="monitor-metrics">
+    <article><small>监控内容</small><strong data-monitor-value="content_count">{{ monitor.content_count }}</strong><span>条视频 / 动态</span></article>
+    <article><small>新评论</small><strong data-monitor-value="new_comments">{{ monitor.new_comments }}</strong><span>等待生成草稿</span></article>
+    <article><small>生成异常</small><strong data-monitor-value="failed_events">{{ monitor.failed_events }}</strong><span>保留等待重试</span></article>
+    <article><small>运行状态</small><strong class="metric-state" data-monitor-label>{{ "监控中" if monitor.enabled else "已暂停" }}</strong><span>每 {{ settings.poll_seconds }} 秒检查</span></article>
+  </div>
+
+  <div class="monitor-columns">
+    <section class="panel backfill-panel">
+      <header class="panel-heading">
+        <div><p class="eyebrow">HISTORY WINDOW</p><h2>历史回溯</h2></div>
+        <span class="state-badge {{ 'state-active' if monitor.backfill_complete else 'state-disabled' }}" data-backfill-state>{{ "已完成" if monitor.backfill_complete else "进行中" }}</span>
+      </header>
+      <div class="backfill-copy">
+        <strong><span data-monitor-value="backfill_imported">{{ monitor.backfill_imported }}</span> / {{ monitor.backfill_limit }}</strong>
+        <span>最多导入 500 条历史评论，达到上限后自动转为只读增量监控。</span>
+      </div>
+      <progress max="{{ monitor.backfill_limit }}" value="{{ monitor.backfill_imported }}" data-backfill-progress>{{ monitor.backfill_imported }}</progress>
+      <dl class="monitor-times">
+        <div><dt>最近同步</dt><dd>{{ monitor.last_polled_at.strftime('%m-%d %H:%M') if monitor.last_polled_at else '尚未同步' }}</dd></div>
+        <div><dt>下次重试</dt><dd>{{ monitor.next_poll_at.strftime('%m-%d %H:%M') if monitor.next_poll_at else '按正常周期' }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="panel guard-panel">
+      <header class="panel-heading"><div><p class="eyebrow">WRITE GUARD</p><h2>发送保护</h2></div></header>
+      <div class="guard-status {{ 'is-open' if settings.bilibili_write_enabled else '' }}">
+        <span aria-hidden="true">{{ "✓" if settings.bilibili_write_enabled else "⌁" }}</span>
+        <div><strong>{{ "真实写入已授权" if settings.bilibili_write_enabled else "B站真实写入未授权" }}</strong><p>{{ "批准后可进入受控发布队列。" if settings.bilibili_write_enabled else "当前只采集、生成和审核，不会向主账号发送内容。" }}</p></div>
+      </div>
+      {% if monitor.error_code %}<div class="monitor-error"><strong>最近异常</strong><code>{{ monitor.error_code }}</code></div>{% endif %}
+      <a class="button button-secondary" href="/reviews">打开审核中心</a>
+    </section>
+  </div>
+{% endblock %}

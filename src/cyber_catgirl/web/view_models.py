@@ -15,6 +15,13 @@ class ReviewItem(BaseModel):
     content: str
     risk_level: str
     review_status: str
+    priority: str = "normal"
+    source_comment: str | None = None
+    actor_name: str | None = None
+    source_title: str | None = None
+    source_url: str | None = None
+    thread_context: list[str] = Field(default_factory=list)
+    safety_reasons: list[str] = Field(default_factory=list)
     created_at: datetime
     publication_status: str | None = None
 
@@ -63,3 +70,16 @@ class DashboardOverview(BaseModel):
     failed_jobs: int = 0
     recent_reviews: list[ReviewItem] = Field(default_factory=list)
     recent_activity: list[LogItem] = Field(default_factory=list)
+
+
+class MonitorConsoleView(BaseModel):
+    enabled: bool = False
+    content_count: int = 0
+    new_comments: int = 0
+    failed_events: int = 0
+    backfill_imported: int = 0
+    backfill_limit: int = 500
+    backfill_complete: bool = False
+    last_polled_at: datetime | None = None
+    next_poll_at: datetime | None = None
+    error_code: str | None = None

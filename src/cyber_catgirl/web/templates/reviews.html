@@ -19,16 +19,31 @@
     <div class="review-cards">
       {% for draft in reviews %}
         <article class="review-card" id="draft-{{ draft.id }}">
-          <header><div class="review-meta"><span class="type-badge">{{ {"reply":"评论回复", "dynamic":"动态", "daily_report":"互动日报"}.get(draft.draft_type, draft.draft_type) }}</span><span class="risk-badge risk-{{ draft.risk_level }}">{{ {"low":"低风险", "medium":"中风险", "high":"高风险"}.get(draft.risk_level, draft.risk_level) }}</span></div><time>{{ draft.created_at.strftime('%Y-%m-%d %H:%M') }}</time></header>
+          <header><div class="review-meta"><span class="type-badge">{{ {"reply":"评论回复", "dynamic":"动态", "daily_report":"互动日报"}.get(draft.draft_type, draft.draft_type) }}</span><span class="risk-badge risk-{{ draft.risk_level }}">{{ {"low":"低风险", "medium":"中风险", "high":"高风险"}.get(draft.risk_level, draft.risk_level) }}</span>{% if draft.priority != 'normal' %}<span class="priority-badge priority-{{ draft.priority }}">{{ "优先" if draft.priority == "urgent" else "较高优先" }}</span>{% endif %}</div><time>{{ draft.created_at.strftime('%Y-%m-%d %H:%M') }}</time></header>
+          {% if draft.source_comment %}
+            <section class="source-comment">
+              <div class="source-comment-head">
+                <span><small>原评论</small><strong>{{ draft.actor_name or "B站用户" }}</strong></span>
+                {% if draft.source_url %}<a href="{{ draft.source_url }}" target="_blank" rel="noreferrer">{{ draft.source_title or "查看来源" }} ↗</a>{% elif draft.source_title %}<span>{{ draft.source_title }}</span>{% endif %}
+              </div>
+              <blockquote>{{ draft.source_comment }}</blockquote>
+              {% if draft.thread_context %}<div class="thread-context"><small>楼中楼上下文</small>{% for line in draft.thread_context %}<p>{{ line }}</p>{% endfor %}</div>{% endif %}
+            </section>
+          {% endif %}
+          {% if draft.safety_reasons %}<div class="reason-row"><small>转人工原因</small>{% for reason in draft.safety_reasons %}<code>{{ reason }}</code>{% endfor %}</div>{% endif %}
           <textarea class="draft-editor" aria-label="草稿内容" data-draft-content="{{ draft.id }}">{{ draft.content }}</textarea>
+          {% if not write_enabled %}
+            <div class="safety-notice"><strong>B站真实写入未授权</strong><span>你可以继续编辑或拒绝；授权前不会创建真实发送任务。</span></div>
+          {% endif %}
           {% if draft.publication_status == "visibility_unknown" %}
             <div class="safety-notice"><strong>需要人工核验</strong><span>平台可能已写入，请到 B站人工检查；系统不会自动重发。</span></div>
           {% endif %}
           <footer>
             <span class="draft-id">DRAFT / {{ draft.id }}</span>
             <div class="card-actions">
+              {% if draft.draft_type == "reply" %}<button class="button button-secondary" type="button" data-regenerate="{{ draft.id }}">重新生成</button>{% endif %}
               <button class="button button-secondary" type="button" data-reject="{{ draft.id }}">拒绝</button>
-              <button class="button button-primary" type="button" data-edit-approve="{{ draft.id }}"{% if kill_switch or draft.publication_status == 'visibility_unknown' %} disabled{% endif %}>编辑并批准</button>
+              <button class="button button-primary" type="button" data-edit-approve="{{ draft.id }}"{% if kill_switch or not write_enabled or draft.publication_status == 'visibility_unknown' %} disabled{% endif %}>{{ "写入未授权" if not write_enabled else "编辑并批准" }}</button>
             </div>
           </footer>
         </article>

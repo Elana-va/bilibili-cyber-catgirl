@@ -49,6 +49,23 @@ def build_page_router(session_factory, state) -> APIRouter:
                 "current_page": "reviews",
                 "run_mode": state.settings.run_mode.value,
                 "kill_switch": state.settings.kill_switch,
+                "write_enabled": state.settings.bilibili_write_enabled,
+            },
+        )
+
+    @router.get("/comment-monitor", response_class=HTMLResponse)
+    def comment_monitor(request: Request):
+        return TEMPLATES.TemplateResponse(
+            request,
+            "comment_monitor.html",
+            {
+                "monitor": service.monitor_console(
+                    state.settings.comment_monitor_enabled
+                ),
+                "settings": state.settings,
+                "current_page": "comment_monitor",
+                "run_mode": state.settings.run_mode.value,
+                "kill_switch": state.settings.kill_switch,
             },
         )
 

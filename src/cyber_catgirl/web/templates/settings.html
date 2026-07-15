@@ -110,6 +110,28 @@
     </section>
   </div>
 
+  <section class="panel auto-reply-panel" data-auto-reply-root>
+    <header class="panel-heading">
+      <div><p class="eyebrow">AUTO REPLY</p><h2>评论自动回复</h2></div>
+      <span class="state-badge {{ 'state-active' if settings.comment_auto_reply_enabled else 'state-disabled' }}">{{ "已开启" if settings.comment_auto_reply_enabled else "默认关闭" }}</span>
+    </header>
+    <div class="guard-status {{ 'is-open' if settings.bilibili_write_enabled else '' }}">
+      <span aria-hidden="true">{{ "✓" if settings.bilibili_write_enabled else "⌁" }}</span>
+      <div><strong>{{ "真实写入已授权" if settings.bilibili_write_enabled else "B站真实写入未授权" }}</strong><p>自动回复还需要有限自动模式、低风险判定、频率限制和全局紧急停止共同放行。</p></div>
+    </div>
+    <form class="auto-reply-form" data-auto-reply-form>
+      <label class="toggle-field"><input type="checkbox" name="enabled"{% if settings.comment_auto_reply_enabled %} checked{% endif %}><span>启用低风险评论自动回复</span></label>
+      <div class="auto-limit-grid">
+        <label><span>单用户每日</span><input type="number" name="user_daily_limit" min="1" max="100" value="{{ settings.auto_reply_user_daily_limit }}"></label>
+        <label><span>账号每小时</span><input type="number" name="account_hourly_limit" min="1" max="500" value="{{ settings.auto_reply_account_hourly_limit }}"></label>
+        <label><span>账号每日</span><input type="number" name="account_daily_limit" min="1" max="5000" value="{{ settings.auto_reply_account_daily_limit }}"></label>
+        <label><span>最小延迟（秒）</span><input type="number" name="min_delay_seconds" min="1" max="600" value="{{ settings.auto_reply_min_delay_seconds }}"></label>
+        <label><span>最大延迟（秒）</span><input type="number" name="max_delay_seconds" min="1" max="1800" value="{{ settings.auto_reply_max_delay_seconds }}"></label>
+      </div>
+      <button class="button button-primary" type="submit">保存自动回复设置</button>
+    </form>
+  </section>
+
   <dialog class="bilibili-login-dialog" id="bilibili-login-dialog" aria-labelledby="bilibili-login-title">
     <form method="dialog" class="bilibili-login-card">
       <button class="dialog-close" value="cancel" aria-label="关闭扫码登录">×</button>

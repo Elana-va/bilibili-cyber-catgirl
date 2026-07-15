@@ -41,7 +41,15 @@ def test_mascot_is_a_project_bound_png_asset():
 
 def test_every_page_has_skip_link_landmark_and_dialog():
     client = make_client()
-    for path in ["/", "/reviews", "/content", "/analytics", "/logs", "/settings"]:
+    for path in [
+        "/",
+        "/comment-monitor",
+        "/reviews",
+        "/content",
+        "/analytics",
+        "/logs",
+        "/settings",
+    ]:
         html = client.get(path).text
         assert 'href="#main-content"' in html
         assert 'id="main-content"' in html
@@ -93,7 +101,12 @@ def test_javascript_files_have_valid_syntax():
     if node is None:
         pytest.skip("Node.js is unavailable for JavaScript syntax validation")
 
-    for script in ["app.js", "bilibili-login.js", "deepseek-connection.js"]:
+    for script in [
+        "app.js",
+        "bilibili-login.js",
+        "deepseek-connection.js",
+        "comment-monitor.js",
+    ]:
         result = subprocess.run(
             [node, "--check", f"src/cyber_catgirl/web/static/{script}"],
             capture_output=True,
