@@ -102,11 +102,18 @@ def create_app(
         login_manager=login_manager,
         account_service=account_service,
         deepseek_service=deepseek_service,
+        monitor_runtime=monitor_runtime,
     )
     application.state.session_factory = session_factory
     application.state.monitor_runtime = monitor_runtime
     application.state.scheduler = scheduler
-    application.include_router(build_router(session_factory, application.state.runtime))
+    application.include_router(
+        build_router(
+            session_factory,
+            application.state.runtime,
+            monitor_runtime,
+        )
+    )
     static_dir = Path(__file__).parent / "web" / "static"
     application.mount("/static", StaticFiles(directory=static_dir), name="static")
     return application
@@ -149,7 +156,7 @@ def _build_default_monitor_runtime(
 
     connector = BilibiliApiConnector(
         credential=credential,
-        write_enabled=False,
+        write_enabled=settings.bilibili_write_enabled,
         on_risk_control=lambda: setattr(
             settings, "comment_monitor_enabled", False
         ),
@@ -178,7 +185,7 @@ def _build_default_monitor_runtime(
             kill_switch=settings.kill_switch,
             allowed_actor_ids=settings.auto_reply_allowlist,
             comment_auto_reply_enabled=settings.comment_auto_reply_enabled,
-            write_enabled=False,
+            write_enabled=settings.bilibili_write_enabled,
             min_reply_interval_seconds=settings.auto_reply_min_delay_seconds,
             user_daily_limit=settings.auto_reply_user_daily_limit,
             account_hourly_limit=settings.auto_reply_account_hourly_limit,

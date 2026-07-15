@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from cyber_catgirl.config import Settings
 from cyber_catgirl.db import create_session_factory
@@ -65,4 +66,18 @@ def test_kill_switch_blocks_edit_and_approve():
     )
 
     assert response.status_code == 409
+
+
+def test_approve_draft_refuses_when_bilibili_write_is_disabled():
+    client, sessions = make_client()
+    draft_id = seed_draft(
+        sessions, content="待审核回复", draft_type="reply", risk="low"
+    )
+
+    response = client.post(f"/api/drafts/{draft_id}/approve")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "B站真实写入未授权"
+    with sessions() as session:
+        assert session.scalar(select(PublishJobRecord)) is None
 

@@ -106,6 +106,20 @@ class MonitorRuntime:
         asyncio.create_task(execute_manual())
         return True
 
+    def apply_settings(self, settings) -> None:
+        self.settings = settings
+        self.reply_service.min_delay_seconds = settings.auto_reply_min_delay_seconds
+        self.reply_service.max_delay_seconds = settings.auto_reply_max_delay_seconds
+        safety = self.reply_service.safety_engine
+        safety.run_mode = settings.run_mode
+        safety.kill_switch = settings.kill_switch
+        safety.comment_auto_reply_enabled = settings.comment_auto_reply_enabled
+        safety.write_enabled = settings.bilibili_write_enabled
+        safety.min_reply_interval_seconds = settings.auto_reply_min_delay_seconds
+        safety.user_daily_limit = settings.auto_reply_user_daily_limit
+        safety.account_hourly_limit = settings.auto_reply_account_hourly_limit
+        safety.account_daily_limit = settings.auto_reply_account_daily_limit
+
     def _pending_event_ids(self, now: datetime, limit: int) -> list[str]:
         priority_order = case(
             (EventRecord.priority == "urgent", 0),
@@ -144,4 +158,3 @@ class MonitorRuntime:
                     .limit(limit)
                 ).all()
             )
-

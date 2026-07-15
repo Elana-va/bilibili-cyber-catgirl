@@ -15,6 +15,7 @@ def test_settings_defaults_are_conservative(monkeypatch):
     assert settings.auto_reply_allowlist == set()
     assert settings.comment_monitor_enabled is False
     assert settings.comment_auto_reply_enabled is False
+    assert settings.bilibili_write_enabled is False
     assert settings.comment_backfill_days == 30
     assert settings.comment_backfill_limit == 500
     assert settings.auto_reply_user_daily_limit == 10

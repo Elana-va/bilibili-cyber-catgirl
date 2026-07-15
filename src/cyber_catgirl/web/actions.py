@@ -13,6 +13,7 @@ from cyber_catgirl.models import (
     ScheduledContentRecord,
     SystemSettingRecord,
 )
+from cyber_catgirl.services.audit import AuditService
 
 
 class KillSwitchRequest(BaseModel):
@@ -63,6 +64,12 @@ class SystemSettingsRequest(BaseModel):
 
 def build_action_router(session_factory, state) -> APIRouter:
     router = APIRouter()
+    audit = AuditService(session_factory)
+
+    def apply_runtime_settings() -> None:
+        runtime = getattr(state, "monitor_runtime", None)
+        if runtime is not None and hasattr(runtime, "apply_settings"):
+            runtime.apply_settings(state.settings)
 
     def save_setting(key: str, value: str) -> None:
         with session_factory() as session:
@@ -78,6 +85,8 @@ def build_action_router(session_factory, state) -> APIRouter:
     def approve(draft_id: int, edited_content: str | None = None) -> dict:
         if state.settings.kill_switch:
             raise HTTPException(status_code=409, detail="kill switch is enabled")
+        if not state.settings.bilibili_write_enabled:
+            raise HTTPException(status_code=409, detail="B站真实写入未授权")
         with session_factory() as session:
             draft = session.get(DraftRecord, draft_id)
             if draft is None:
@@ -94,6 +103,11 @@ def build_action_router(session_factory, state) -> APIRouter:
             session.add(job)
             draft.review_status = "approved"
             session.commit()
+            audit.record(
+                "reply_draft_approved",
+                str(draft.id),
+                {"job_id": job.id, "edited": edited_content is not None},
+            )
             return {"draft_id": draft.id, "job_id": job.id, "status": "approved"}
 
     @router.get("/api/health")
@@ -107,6 +121,7 @@ def build_action_router(session_factory, state) -> APIRouter:
     @router.post("/api/system/kill-switch")
     def set_kill_switch(payload: KillSwitchRequest) -> dict:
         state.settings.kill_switch = payload.enabled
+        apply_runtime_settings()
         save_setting("kill_switch", str(payload.enabled).lower())
         if payload.enabled:
             with session_factory() as session:
@@ -121,18 +136,22 @@ def build_action_router(session_factory, state) -> APIRouter:
     @router.post("/api/system/run-mode")
     def set_run_mode(payload: RunModeRequest) -> dict:
         state.settings.run_mode = payload.run_mode
+        apply_runtime_settings()
         save_setting("run_mode", payload.run_mode.value)
         return {"run_mode": state.settings.run_mode.value}
 
     @router.post("/api/drafts/{draft_id}/approve")
+    @router.post("/api/reply-drafts/{draft_id}/approve")
     def approve_draft(draft_id: int) -> dict:
         return approve(draft_id)
 
     @router.post("/api/drafts/{draft_id}/edit-and-approve")
+    @router.post("/api/reply-drafts/{draft_id}/edit-and-approve")
     def edit_and_approve_draft(draft_id: int, payload: EditDraftRequest) -> dict:
         return approve(draft_id, payload.content)
 
     @router.post("/api/drafts/{draft_id}/reject")
+    @router.post("/api/reply-drafts/{draft_id}/reject")
     def reject_draft(draft_id: int) -> dict:
         with session_factory() as session:
             draft = session.get(DraftRecord, draft_id)
@@ -142,6 +161,7 @@ def build_action_router(session_factory, state) -> APIRouter:
                 raise HTTPException(status_code=409, detail="draft is not pending")
             draft.review_status = "rejected"
             session.commit()
+            audit.record("reply_draft_rejected", str(draft.id), {})
             return {"draft_id": draft.id, "status": "rejected"}
 
     @router.post("/api/content-plans", status_code=201)
@@ -176,6 +196,7 @@ def build_action_router(session_factory, state) -> APIRouter:
         state.settings.run_mode = payload.run_mode
         state.settings.auto_reply_allowlist = allowlist
         state.settings.poll_seconds = payload.poll_seconds
+        apply_runtime_settings()
         return {
             "run_mode": payload.run_mode.value,
             "auto_reply_allowlist": sorted(allowlist),

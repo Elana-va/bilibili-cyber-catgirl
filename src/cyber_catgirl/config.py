@@ -18,6 +18,7 @@ class Settings(BaseModel):
     auto_reply_allowlist: set[str] = Field(default_factory=set)
     comment_monitor_enabled: bool = False
     comment_auto_reply_enabled: bool = False
+    bilibili_write_enabled: bool = False
     comment_backfill_days: int = Field(default=30, ge=1, le=90)
     comment_backfill_limit: int = Field(default=500, ge=0, le=5000)
     auto_reply_user_daily_limit: int = Field(default=10, ge=1, le=100)
@@ -47,6 +48,9 @@ class Settings(BaseModel):
             comment_auto_reply_enabled=(
                 getenv("CATGIRL_COMMENT_AUTO_REPLY_ENABLED", "false").lower()
                 == "true"
+            ),
+            bilibili_write_enabled=(
+                getenv("CATGIRL_BILIBILI_WRITE_ENABLED", "false").lower() == "true"
             ),
             comment_backfill_days=int(
                 getenv("CATGIRL_COMMENT_BACKFILL_DAYS", "30")

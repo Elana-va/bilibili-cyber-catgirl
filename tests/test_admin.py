@@ -32,7 +32,9 @@ class StubMonitorRuntime:
 
 def make_client():
     session_factory = create_session_factory("sqlite+pysqlite:///:memory:")
-    app = create_app(Settings(), session_factory=session_factory)
+    app = create_app(
+        Settings(bilibili_write_enabled=True), session_factory=session_factory
+    )
     return TestClient(app), session_factory
 
 
