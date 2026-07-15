@@ -130,3 +130,42 @@ class CredentialStore:
 
     def delete(self) -> None:
         self.path.unlink(missing_ok=True)
+
+
+@dataclass(frozen=True)
+class DeepSeekCredentialData:
+    api_key: str
+    model: str
+    verified_at: str
+
+
+class DeepSeekCredentialStore:
+    def __init__(self, path: Path, protector: DataProtector):
+        self.path = path
+        self.protector = protector
+
+    def configured(self) -> bool:
+        return self.path.is_file()
+
+    def save(self, data: DeepSeekCredentialData) -> None:
+        plaintext = json.dumps(asdict(data), ensure_ascii=False).encode("utf-8")
+        ciphertext = self.protector.protect(plaintext)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.with_suffix(".tmp")
+        temporary.write_bytes(ciphertext)
+        temporary.replace(self.path)
+
+    def load(self) -> DeepSeekCredentialData | None:
+        if not self.configured():
+            return None
+        try:
+            plaintext = self.protector.unprotect(self.path.read_bytes())
+            payload = json.loads(plaintext.decode("utf-8"))
+            return DeepSeekCredentialData(**payload)
+        except CredentialUnreadable:
+            raise
+        except Exception as exc:
+            raise CredentialUnreadable("DeepSeek 凭证无法解密") from exc
+
+    def delete(self) -> None:
+        self.path.unlink(missing_ok=True)
