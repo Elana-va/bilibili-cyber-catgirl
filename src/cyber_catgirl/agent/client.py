@@ -2,6 +2,8 @@ from typing import Protocol
 
 import httpx
 
+from cyber_catgirl.services.deepseek_connection import DEFAULT_MODEL
+
 
 class LLMPort(Protocol):
     async def generate_json(self, messages: list[dict], schema: dict) -> dict: ...
@@ -13,7 +15,7 @@ class DeepSeekClient:
         api_key: str,
         *,
         base_url: str = "https://api.deepseek.com",
-        model: str = "deepseek-chat",
+        model: str = DEFAULT_MODEL,
         timeout_seconds: float = 30.0,
     ) -> None:
         self.api_key = api_key

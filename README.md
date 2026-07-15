@@ -56,6 +56,16 @@ B站账号推荐从管理台 `/settings` 使用手机 App 扫码连接。会话�
 `data/secrets/bilibili-credential.bin` 加密保存，只能由当前 Windows 用户解密；环境变量
 仍作为旧部署的只读后备来源。管理台永远不会显示或导出 Cookie。
 
+### DeepSeek 连接
+
+打开本地管理台的“系统设置”，在 DeepSeek 卡片中输入 API Key 并选择
+`deepseek-v4-flash`（默认）或 `deepseek-v4-pro`。系统仅使用官方
+`https://api.deepseek.com/models` 验证连接，成功后由当前 Windows 用户的
+DPAPI 加密保存在 `data/secrets/deepseek-credential.bin`；页面和接口不会回显密钥。
+
+已有部署仍可使用 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL` 和
+`DEEPSEEK_MODEL` 环境变量。本机加密凭证优先于环境变量凭证。
+
 ## 启动控制台
 
 ```powershell
