@@ -7,6 +7,7 @@ from cyber_catgirl.db import create_session_factory
 from cyber_catgirl.models import EventRecord, PublishJobRecord
 from cyber_catgirl.services.comment_monitor import MonitorPollResult
 from cyber_catgirl.services.monitor_runtime import MonitorRuntime
+from cyber_catgirl.services.publishing import PublishResult
 
 
 NOW = datetime(2026, 7, 15, 8, 0, tzinfo=timezone.utc)
@@ -50,6 +51,17 @@ class RecordingDiscovery:
     async def run_once(self, now):
         self.calls += 1
         return object()
+
+
+class RiskControlPublisher(RecordingPublisher):
+    async def execute(self, job_id: int, now: datetime | None = None):
+        self.executed_job_ids.append(job_id)
+        return PublishResult(
+            job_id,
+            "cancelled",
+            None,
+            error_code="bilibili_risk_control",
+        )
 
 
 @dataclass
@@ -139,3 +151,20 @@ async def test_manual_sync_discovers_content_before_polling():
     await asyncio.sleep(0)
 
     assert discovery.calls == 1
+
+
+async def test_cycle_stops_remaining_writes_after_platform_risk_control():
+    fixture = make_runtime()
+    publisher = RiskControlPublisher()
+    fixture.runtime.publisher = publisher
+    with fixture.sessions.begin() as session:
+        session.add_all(
+            [
+                PublishJobRecord(idempotency_key="risk-1", status="pending"),
+                PublishJobRecord(idempotency_key="risk-2", status="pending"),
+            ]
+        )
+
+    await fixture.runtime.run_cycle(now=NOW)
+
+    assert publisher.executed_job_ids == [1]

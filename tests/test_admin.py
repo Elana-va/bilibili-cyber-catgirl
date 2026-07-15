@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from cyber_catgirl.config import Settings
 from cyber_catgirl.db import create_session_factory
-from cyber_catgirl.main import create_app
+from cyber_catgirl.main import _build_risk_control_handler, create_app
 from cyber_catgirl.models import DraftRecord, PublishJobRecord, SystemSettingRecord
 
 
@@ -118,3 +118,28 @@ def test_persisted_monitor_setting_is_loaded_on_restart():
 
     assert app.state.runtime.settings.comment_monitor_enabled is True
     assert app.state.monitor_runtime.settings.comment_monitor_enabled is True
+
+
+def test_platform_risk_control_persists_global_write_pause():
+    sessions = create_session_factory("sqlite+pysqlite:///:memory:")
+    settings = Settings(
+        comment_monitor_enabled=True,
+        bilibili_write_enabled=True,
+    )
+    with sessions.begin() as session:
+        session.add(
+            PublishJobRecord(idempotency_key="queued-auto", status="pending")
+        )
+
+    _build_risk_control_handler(sessions, settings)()
+
+    with sessions() as session:
+        job = session.scalar(select(PublishJobRecord))
+        stored = {
+            row.setting_key: row.setting_value
+            for row in session.scalars(select(SystemSettingRecord)).all()
+        }
+    assert settings.kill_switch is True
+    assert settings.comment_monitor_enabled is False
+    assert job.status == "cancelled"
+    assert stored["kill_switch"] == "true"

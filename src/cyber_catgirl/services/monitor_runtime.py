@@ -71,7 +71,13 @@ class MonitorRuntime:
             published = []
             for job_id in due_job_ids:
                 try:
-                    published.append(await self.publisher.execute(job_id, now=now))
+                    result = await self.publisher.execute(job_id, now=now)
+                    published.append(result)
+                    if (
+                        getattr(result, "error_code", None)
+                        == "bilibili_risk_control"
+                    ):
+                        break
                 except Exception as exc:
                     published.append(exc)
             return MonitorCycleResult(
@@ -82,7 +88,7 @@ class MonitorRuntime:
                 generation_failed=sum(
                     isinstance(item, Exception) for item in generated
                 ),
-                publish_started=len(due_job_ids),
+                publish_started=len(published),
                 publish_failed=sum(
                     isinstance(item, Exception) for item in published
                 ),

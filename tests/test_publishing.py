@@ -210,3 +210,28 @@ async def test_auto_job_waits_when_minimum_interval_is_not_elapsed():
     assert due.last_error_code == "auto_rate_limited"
     assert due.next_attempt_at == (NOW + timedelta(seconds=6)).replace(tzinfo=None)
     assert connector.write_calls == []
+
+
+async def test_manual_job_obeys_account_send_interval():
+    sessions = create_session_factory("sqlite+pysqlite:///:memory:")
+    prior_id = seed_reply_job(sessions, event_id="comment_202")
+    due_id = seed_reply_job(sessions, event_id="comment_203")
+    with sessions.begin() as session:
+        prior = session.get(PublishJobRecord, prior_id)
+        prior.status = "visibility_unknown"
+        prior.platform_id = "comment:500"
+        prior.completed_at = NOW - timedelta(seconds=2)
+    connector = FakeBilibiliConnector()
+    settings = Settings(
+        bilibili_write_enabled=True,
+        auto_reply_min_delay_seconds=8,
+    )
+
+    result = await Publisher(
+        sessions,
+        connector,
+        auto_guard=AutoPublishGuard(sessions, settings),
+    ).execute(due_id, now=NOW)
+
+    assert result.status == "retry_wait"
+    assert connector.write_calls == []

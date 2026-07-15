@@ -1,9 +1,12 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+import json
 from os import getenv
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import select
 
 from cyber_catgirl.config import Settings
 from cyber_catgirl.connectors.bilibili_login import (
@@ -11,6 +14,11 @@ from cyber_catgirl.connectors.bilibili_login import (
     BilibiliQrSdkAdapter,
 )
 from cyber_catgirl.db import create_session_factory
+from cyber_catgirl.models import (
+    AuditLogRecord,
+    PublishJobRecord,
+    SystemSettingRecord,
+)
 from cyber_catgirl.security.credential_store import (
     CredentialStore,
     DeepSeekCredentialStore,
@@ -153,12 +161,11 @@ def _build_default_monitor_runtime(
         )
         account_id = bilibili_data.dedeuserid or "0"
 
+    risk_control_handler = _build_risk_control_handler(session_factory, settings)
     connector = BilibiliApiConnector(
         credential=credential,
         write_enabled=settings.bilibili_write_enabled,
-        on_risk_control=lambda: setattr(
-            settings, "comment_monitor_enabled", False
-        ),
+        on_risk_control=risk_control_handler,
     )
     llm = _CredentialBackedLlm(deepseek_store)
 
@@ -230,6 +237,52 @@ def _build_default_monitor_runtime(
         content_discovery=discovery,
         prepare=refresh_bilibili_credential,
     )
+
+
+def _build_risk_control_handler(session_factory, settings):
+    def pause_all_writes() -> None:
+        now = datetime.now(timezone.utc)
+        settings.kill_switch = True
+        settings.comment_monitor_enabled = False
+        with session_factory.begin() as session:
+            for key, value in (
+                ("kill_switch", "true"),
+                ("comment_monitor_enabled", "false"),
+            ):
+                row = session.scalar(
+                    select(SystemSettingRecord).where(
+                        SystemSettingRecord.setting_key == key
+                    )
+                )
+                if row is None:
+                    session.add(
+                        SystemSettingRecord(setting_key=key, setting_value=value)
+                    )
+                else:
+                    row.setting_value = value
+
+            queued_jobs = session.scalars(
+                select(PublishJobRecord).where(
+                    PublishJobRecord.status.in_(("pending", "retry_wait"))
+                )
+            ).all()
+            for job in queued_jobs:
+                job.status = "cancelled"
+                job.last_error_code = "bilibili_risk_control"
+                job.completed_at = now
+
+            session.add(
+                AuditLogRecord(
+                    action="bilibili_risk_control_pause",
+                    entity_id="system",
+                    details_json=json.dumps(
+                        {"cancelled_jobs": len(queued_jobs)},
+                        separators=(",", ":"),
+                    ),
+                )
+            )
+
+    return pause_all_writes
 
 
 class _CredentialBackedLlm:
