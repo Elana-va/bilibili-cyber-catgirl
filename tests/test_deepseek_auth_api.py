@@ -104,6 +104,21 @@ def test_connect_rejects_unknown_model_before_service_call():
     assert service.connected_with is None
 
 
+def test_validation_error_never_echoes_api_key():
+    client, service = make_client()
+    oversized_secret = "sk-" + "s" * 600
+
+    response = client.post(
+        "/api/deepseek/connection",
+        json={"api_key": oversized_secret, "model": "deepseek-v4-flash"},
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "invalid_connection_request"}
+    assert oversized_secret not in response.text
+    assert service.connected_with is None
+
+
 def test_verify_and_disconnect_return_public_state():
     client, _ = make_client()
     client.post(

@@ -1,8 +1,6 @@
 from dataclasses import asdict
-from typing import Literal
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Request
 
 from cyber_catgirl.security.credential_store import (
     CredentialUnreadable,
@@ -15,11 +13,7 @@ from cyber_catgirl.services.deepseek_connection import (
     RateLimited,
     SelectedModelUnavailable,
 )
-
-
-class DeepSeekConnectRequest(BaseModel):
-    api_key: str = Field(min_length=1, max_length=512)
-    model: Literal["deepseek-v4-flash", "deepseek-v4-pro"]
+from cyber_catgirl.services.deepseek_connection import ALLOWED_MODELS
 
 
 def _map_error(exc: Exception) -> HTTPException:
@@ -51,9 +45,20 @@ def build_deepseek_auth_router(service) -> APIRouter:
             raise _map_error(exc) from exc
 
     @router.post("/api/deepseek/connection")
-    async def connect(payload: DeepSeekConnectRequest) -> dict:
+    async def connect(request: Request) -> dict:
         try:
-            return asdict(await service.connect(payload.api_key, payload.model))
+            payload = await request.json()
+            api_key = payload.get("api_key") if isinstance(payload, dict) else None
+            model = payload.get("model") if isinstance(payload, dict) else None
+            if (
+                not isinstance(api_key, str)
+                or not 1 <= len(api_key) <= 512
+                or model not in ALLOWED_MODELS
+            ):
+                raise HTTPException(422, "invalid_connection_request")
+            return asdict(await service.connect(api_key, model))
+        except HTTPException:
+            raise
         except Exception as exc:
             raise _map_error(exc) from exc
 
