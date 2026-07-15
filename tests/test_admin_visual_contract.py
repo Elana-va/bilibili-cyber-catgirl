@@ -57,7 +57,17 @@ def test_styles_include_mobile_and_reduced_motion_contracts():
     assert ":focus-visible" in css
 
 
-def test_javascript_has_valid_syntax():
+def test_settings_contains_accessible_bilibili_login_dialog():
+    html = make_client().get("/settings").text
+
+    assert "data-bilibili-connect" in html
+    assert 'id="bilibili-login-dialog"' in html
+    assert 'aria-labelledby="bilibili-login-title"' in html
+    assert 'data-bilibili-account' in html
+    assert "/static/bilibili-login.js" in html
+
+
+def test_javascript_files_have_valid_syntax():
     bundled = (
         Path.home()
         / ".cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe"
@@ -66,11 +76,12 @@ def test_javascript_has_valid_syntax():
     if node is None:
         pytest.skip("Node.js is unavailable for JavaScript syntax validation")
 
-    result = subprocess.run(
-        [node, "--check", "src/cyber_catgirl/web/static/app.js"],
-        capture_output=True,
-        text=False,
-        check=False,
-    )
+    for script in ["app.js", "bilibili-login.js"]:
+        result = subprocess.run(
+            [node, "--check", f"src/cyber_catgirl/web/static/{script}"],
+            capture_output=True,
+            text=False,
+            check=False,
+        )
 
-    assert result.returncode == 0, result.stderr.decode("utf-8", errors="replace")
+        assert result.returncode == 0, result.stderr.decode("utf-8", errors="replace")

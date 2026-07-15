@@ -2,9 +2,107 @@
 {% block title %}系统设置 · 小喵创作室{% endblock %}
 {% block page_title %}系统设置{% endblock %}
 {% block content %}
-  <section class="page-intro"><div><p class="eyebrow">SAFETY SETTINGS</p><h2>自动化必须有清晰边界</h2><p>凭证仅从本机进程环境读取；这里不会显示、复制或保存具体值。</p></div></section>
+  <section class="page-intro">
+    <div>
+      <p class="eyebrow">SAFETY SETTINGS</p>
+      <h2>把账号连接留在这台电脑</h2>
+      <p>使用手机扫码登录。会话由 Windows 当前用户加密保存，不显示、不复制，也不会交给模型。</p>
+    </div>
+  </section>
+
   <div class="settings-grid">
-    <section class="panel"><header class="panel-heading"><div><p class="eyebrow">RUNTIME</p><h2>运行策略</h2></div></header><form class="settings-form" data-settings-form><label><span>运行模式</span><select name="run_mode"><option value="manual_only"{% if settings.run_mode.value == 'manual_only' %} selected{% endif %}>全人工</option><option value="limited_auto"{% if settings.run_mode.value == 'limited_auto' %} selected{% endif %}>白名单有限自动</option></select><small>有限自动必须配置至少一个用户 ID。</small></label><label><span>自动回复白名单</span><textarea name="auto_reply_allowlist" placeholder="每行一个 B站用户 ID">{{ settings.auto_reply_allowlist|sort|join('\n') }}</textarea><small>保存时自动去重和清理空白。</small></label><label><span>评论轮询间隔（秒）</span><input name="poll_seconds" type="number" min="30" max="3600" value="{{ settings.poll_seconds }}"></label><button class="button button-primary" type="submit">保存设置</button></form></section>
-    <section class="panel"><header class="panel-heading"><div><p class="eyebrow">CONNECTIONS</p><h2>连接状态</h2></div></header><div class="connection-list"><div><span class="connection-icon">B</span><span><strong>B站测试账号</strong><small>SESSDATA + BILI_JCT</small></span><span class="state-badge state-{{ 'active' if bilibili_configured else 'disabled' }}">{{ "已配置" if bilibili_configured else "未配置" }}</span></div><div><span class="connection-icon">AI</span><span><strong>DeepSeek 模型</strong><small>DEEPSEEK_API_KEY</small></span><span class="state-badge state-{{ 'active' if llm_configured else 'disabled' }}">{{ "已配置" if llm_configured else "未配置" }}</span></div></div><div class="privacy-note"><strong>凭证隔离</strong><p>后台只读取“是否存在”，不会把值发送到浏览器、模型上下文或审计日志。</p></div></section>
+    <section class="panel">
+      <header class="panel-heading">
+        <div><p class="eyebrow">RUNTIME</p><h2>运行策略</h2></div>
+      </header>
+      <form class="settings-form" data-settings-form>
+        <label>
+          <span>运行模式</span>
+          <select name="run_mode">
+            <option value="manual_only"{% if settings.run_mode.value == 'manual_only' %} selected{% endif %}>全人工</option>
+            <option value="limited_auto"{% if settings.run_mode.value == 'limited_auto' %} selected{% endif %}>白名单有限自动</option>
+          </select>
+          <small>扫码连接不会改变运行模式；主账号继续保持人工值守。</small>
+        </label>
+        <label>
+          <span>自动回复白名单</span>
+          <textarea name="auto_reply_allowlist" placeholder="每行一个 B站用户 ID">{{ settings.auto_reply_allowlist|sort|join('\n') }}</textarea>
+          <small>有限自动必须配置至少一个用户 ID。</small>
+        </label>
+        <label>
+          <span>评论轮询间隔（秒）</span>
+          <input name="poll_seconds" type="number" min="30" max="3600" value="{{ settings.poll_seconds }}">
+        </label>
+        <button class="button button-primary" type="submit">保存设置</button>
+      </form>
+    </section>
+
+    <section class="panel connection-panel" data-bilibili-root>
+      <header class="panel-heading">
+        <div><p class="eyebrow">CONNECTIONS</p><h2>连接状态</h2></div>
+        <span class="state-badge state-{{ 'active' if bilibili_configured else 'disabled' }}" data-bilibili-status>
+          {{ "待验证" if bilibili_configured else "未连接" }}
+        </span>
+      </header>
+
+      <div class="bilibili-empty" data-bilibili-empty>
+        <span class="connection-orbit" aria-hidden="true"><span>B</span></span>
+        <div>
+          <strong>连接你的 B站主账号</strong>
+          <p>扫码后先做身份与评论只读验证。任何回复或发布仍需你逐条批准。</p>
+        </div>
+        <button class="button button-primary" type="button" data-bilibili-connect>扫码连接 B站</button>
+      </div>
+
+      <div class="bilibili-account" data-bilibili-account hidden>
+        <span class="account-avatar-shell">
+          <img data-bilibili-avatar alt="" hidden>
+          <span data-bilibili-avatar-fallback aria-hidden="true">B</span>
+        </span>
+        <span class="account-copy">
+          <small>CONNECTED ACCOUNT</small>
+          <strong data-bilibili-name>正在验证账号…</strong>
+          <span data-bilibili-uid></span>
+        </span>
+        <span class="verified-chip"><span aria-hidden="true">✓</span> 只读验证通过</span>
+        <button class="button button-danger-ghost" type="button" data-bilibili-disconnect>断开连接</button>
+      </div>
+
+      <div class="connection-divider"></div>
+      <div class="connection-list">
+        <div>
+          <span class="connection-icon">AI</span>
+          <span><strong>DeepSeek 模型</strong><small>本机 API 密钥</small></span>
+          <span class="state-badge state-{{ 'active' if llm_configured else 'disabled' }}">{{ "已配置" if llm_configured else "未配置" }}</span>
+        </div>
+      </div>
+      <div class="privacy-note">
+        <strong>凭证隔离</strong>
+        <p>B站会话经 Windows DPAPI 加密保存；页面、数据库、日志和模型上下文都拿不到原始值。</p>
+      </div>
+    </section>
   </div>
+
+  <dialog class="bilibili-login-dialog" id="bilibili-login-dialog" aria-labelledby="bilibili-login-title">
+    <form method="dialog" class="bilibili-login-card">
+      <button class="dialog-close" value="cancel" aria-label="关闭扫码登录">×</button>
+      <div class="login-heading">
+        <p class="eyebrow">LOCAL QR SIGN-IN</p>
+        <h2 id="bilibili-login-title">用哔哩哔哩 App 扫码</h2>
+        <p>在手机端确认后，本页会自动完成连接。</p>
+      </div>
+      <div class="qr-stage" data-bilibili-qr-stage>
+        <span class="qr-scanner" aria-hidden="true"></span>
+        <img data-bilibili-qr alt="B站登录二维码" hidden>
+        <span class="qr-placeholder" data-bilibili-qr-placeholder>正在生成安全二维码…</span>
+      </div>
+      <div class="login-state" aria-live="polite">
+        <span class="status-dot"></span>
+        <strong data-bilibili-phase>准备连接</strong>
+        <span data-bilibili-countdown>有效期 180 秒</span>
+      </div>
+      <p class="login-footnote">二维码只在本机浏览器显示，不会进入日志。请勿截图或转发。</p>
+      <button class="button button-secondary" type="button" data-bilibili-retry hidden>重新生成二维码</button>
+    </form>
+  </dialog>
 {% endblock %}
