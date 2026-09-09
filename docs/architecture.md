@@ -1,5 +1,7 @@
 # 系统架构
 
+<p align="center"><strong>简体中文</strong> · <a href="architecture.en.md">English</a></p>
+
 本文描述 Bilibili Cyber Catgirl 当前实现的模块边界、数据流、安全模型和扩展方式。
 
 ## 1. 设计目标

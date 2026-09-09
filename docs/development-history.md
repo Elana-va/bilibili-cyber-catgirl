@@ -1,5 +1,7 @@
 # 开发历程：从一个账号截图到安全可控的 AI 角色系统
 
+<p align="center"><strong>简体中文</strong> · <a href="development-history.en.md">English</a></p>
+
 这份记录还原 Bilibili Cyber Catgirl 的真实开发过程。项目不是按一张完整蓝图一次完成，而是在持续提问、验证和收紧边界中形成的。
 
 ## 起点：发布内容的“不是人”是怎么实现的

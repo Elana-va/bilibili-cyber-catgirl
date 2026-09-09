@@ -2,6 +2,10 @@
   <img src="src/cyber_catgirl/web/static/catgirl-mascot.png" width="150" alt="赛博猫娘形象">
 </p>
 
+<p align="center">
+  <strong>简体中文</strong> · <a href="README_EN.md">English</a>
+</p>
+
 <h1 align="center">Bilibili Cyber Catgirl · B站赛博猫娘</h1>
 
 <p align="center">
