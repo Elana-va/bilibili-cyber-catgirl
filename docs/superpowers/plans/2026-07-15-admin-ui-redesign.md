@@ -18,8 +18,8 @@
 - 动态和日报仍需人工批准；所有外部写入继续经过 `PublishJobRecord` 和 `Publisher`。
 - 不增加 React、Vue、第三方图表库或外部字体。
 - 所有代码修改使用 TDD：先看到新测试失败，再写最小实现，再运行完整相关测试。
-- 使用工作区 Python：`C:\Users\Administrator\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe`。
-- 使用工作区 Git：`C:\Users\Administrator\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe`。
+- 使用项目虚拟环境中的 Python。
+- 使用系统中已安装的 Git。
 
 ---
 
