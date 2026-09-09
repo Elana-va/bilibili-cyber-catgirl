@@ -57,6 +57,26 @@
 
 桌面端采用侧边导航，手机端自动切换为底部导航。服务默认只监听 `127.0.0.1`，不暴露到局域网或互联网。
 
+## 界面预览
+
+### 工作台
+
+总览评论采集、待审核内容、异常任务和最近运行记录。
+
+![Bilibili Cyber Catgirl 工作台](docs/images/dashboard.png)
+
+### 审核中心
+
+在真实上下文中检查、编辑、重新生成或拒绝 AI 回复；没有写入授权时，界面会明确阻止发送。
+
+![Bilibili Cyber Catgirl 审核中心](docs/images/review-center.png)
+
+### 系统设置
+
+集中管理运行策略、B站账号、DeepSeek 模型、评论自动回复和写入保护。
+
+![Bilibili Cyber Catgirl 系统设置](docs/images/settings.png)
+
 ## 系统如何工作
 
 ```mermaid
