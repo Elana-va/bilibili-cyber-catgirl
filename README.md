@@ -1,10 +1,49 @@
-# Bilibili Cyber Catgirl
-
 <p align="center">
-  <img src="src/cyber_catgirl/web/static/catgirl-mascot.png" width="180" alt="赛博猫娘形象">
+  <img src="src/cyber_catgirl/web/static/catgirl-mascot.png" width="150" alt="赛博猫娘形象">
 </p>
 
-<p align="center">一个安全优先、默认人工审核、可追溯的 B站 AI 角色运营实验平台。</p>
+<h1 align="center">Bilibili Cyber Catgirl · B站赛博猫娘</h1>
+
+<p align="center">
+  <strong>让大模型持续扮演一个角色，也让每一次真实账号操作保持可控。</strong>
+</p>
+
+<p align="center">
+  <img alt="Python 3.11–3.12" src="https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-local%20console-009688?logo=fastapi&logoColor=white">
+  <img alt="DeepSeek" src="https://img.shields.io/badge/LLM-DeepSeek-4D6BFE">
+  <img alt="Human in the loop" src="https://img.shields.io/badge/default-human--in--the--loop-FF6B9A">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-178_passed-22A06B">
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+</p>
+
+<p align="center">
+  <a href="#快速开始"><strong>快速开始</strong></a> ·
+  <a href="#界面预览"><strong>界面预览</strong></a> ·
+  <a href="docs/architecture.md"><strong>系统架构</strong></a> ·
+  <a href="docs/development-history.md"><strong>完整开发历程</strong></a> ·
+  <a href="docs/operations.md"><strong>运行手册</strong></a> ·
+  <a href="SECURITY.md"><strong>安全策略</strong></a>
+</p>
+
+![Bilibili Cyber Catgirl 工作台](docs/images/dashboard.png)
+
+## 从这里开始
+
+> **第一次使用：** [5 分钟安装与启动](#快速开始) · [连接 DeepSeek](#连接-deepseek) · [连接 B站账号](#连接-b站账号) · [安全试运行](#第一次试运行)
+
+> **了解项目：** [为什么做](#为什么做这个项目) · [核心能力](#核心能力) · [系统如何工作](#系统如何工作) · [从截图到开源的完整开发历程](docs/development-history.md)
+
+> **参与开发：** [架构与模块边界](docs/architecture.md) · [贡献指南](CONTRIBUTING.md) · [安全问题报告](SECURITY.md)
+
+## 目前走到哪里
+
+| 阶段 | 产品变化 | 可追溯记录 |
+|---|---|---|
+| 2026-07-14 | 建立默认人工、可审计、可紧急停止的研究基线 | [开发历程：安全基线](docs/development-history.md#2026-07-14安全基线先于功能) |
+| 2026-07-15 | 完成控制台、扫码登录、DeepSeek、评论回溯、审核与发布闸门 | [开发历程：完整控制台](docs/development-history.md#2026-07-15从领域骨架到完整控制台) |
+| 2026-07-16 | 升级 `catgirl-v2`，加入场景化人设校验和失败纠偏 | [开发历程：人设契约](docs/development-history.md#2026-07-16猫娘从提示词升级为契约) |
+| 2026-09-10 | 完成公开文档、安全审计与首次 GitHub 开源 | [完整开发历程](docs/development-history.md) |
 
 > 本项目不是“让大模型直接控制账号”的脚本。它把平台连接、内容采集、模型生成、风险判断、人工审核和发布执行拆成独立环节，并用多重开关保证第一次启动不会向 B站写入任何内容。
 
@@ -58,12 +97,6 @@
 桌面端采用侧边导航，手机端自动切换为底部导航。服务默认只监听 `127.0.0.1`，不暴露到局域网或互联网。
 
 ## 界面预览
-
-### 工作台
-
-总览评论采集、待审核内容、异常任务和最近运行记录。
-
-![Bilibili Cyber Catgirl 工作台](docs/images/dashboard.png)
 
 ### 审核中心
 
